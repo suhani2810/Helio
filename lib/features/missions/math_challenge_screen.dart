@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/theme/theme_mode_enum.dart';
+import '../../widgets/theme/sky_background.dart';
+import '../../widgets/premium_card.dart';
 import '../mood/mood_tracking_screen.dart';
 
-class MathChallengeScreen extends StatefulWidget {
+class MathChallengeScreen extends ConsumerStatefulWidget {
   const MathChallengeScreen({super.key});
 
   @override
-  State<MathChallengeScreen> createState() => _MathChallengeScreenState();
+  ConsumerState<MathChallengeScreen> createState() => _MathChallengeScreenState();
 }
 
-class _MathChallengeScreenState extends State<MathChallengeScreen> {
+class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
   final String _problem = '24 + 17';
   final String _answer = '41';
   String _input = '';
 
   void _onKeyTap(String key) {
+    if (key == '✓') return;
     setState(() {
       if (key == 'C') {
         _input = '';
@@ -43,63 +49,115 @@ class _MathChallengeScreenState extends State<MathChallengeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+    final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            Text('Quick Math', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 24),
-            Text(
-              _problem,
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 80),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              height: 80,
-              width: 200,
-              decoration: BoxDecoration(
-                border: Border.all(color: HelioColors.sunriseOrange, width: 2),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Center(
-                child: Text(
-                  _input,
-                  style: Theme.of(context).textTheme.displayMedium,
+      backgroundColor: Colors.transparent,
+      body: SkyBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 60),
+              Text(
+                'Quick Math',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            ),
-            const Spacer(),
-            _buildKeypad(),
-            const SizedBox(height: 40),
-          ],
+              const SizedBox(height: 48),
+              Text(
+                _problem,
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                  fontSize: 96,
+                  fontWeight: FontWeight.w900,
+                  color: textColor,
+                  letterSpacing: -2,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Container(
+                height: 90,
+                width: 220,
+                decoration: BoxDecoration(
+                  color: (isNight ? Colors.white : primaryColor).withOpacity(0.1),
+                  border: Border.all(color: primaryColor, width: 3),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.2),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    _input,
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              _buildKeypad(isNight, textColor, primaryColor),
+              const SizedBox(height: 60),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildKeypad() {
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
+  }
+
+  Widget _buildKeypad(bool isNight, Color textColor, Color primaryColor) {
     final keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '✓'];
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 48),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1.5,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 20,
+        childAspectRatio: 1.4,
       ),
       itemCount: keys.length,
       itemBuilder: (context, index) {
-        return ElevatedButton(
-          onPressed: () => _onKeyTap(keys[index]),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: HelioColors.cardDark,
-            foregroundColor: HelioColors.textPrimary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        final key = keys[index];
+        final isSpecial = key == 'C' || key == '✓';
+        
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _onKeyTap(key),
+            borderRadius: BorderRadius.circular(20),
+            child: PremiumCard(
+              isGlass: isNight,
+              padding: EdgeInsets.zero,
+              child: Center(
+                child: Text(
+                  key,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: isSpecial ? primaryColor : textColor,
+                  ),
+                ),
+              ),
+            ),
           ),
-          child: Text(keys[index], style: const TextStyle(fontSize: 24)),
         );
       },
     );

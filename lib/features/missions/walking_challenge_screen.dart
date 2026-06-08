@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/theme/theme_mode_enum.dart';
+import '../../widgets/theme/sky_background.dart';
+import '../../widgets/premium_card.dart';
 
-class WalkingChallengeScreen extends StatefulWidget {
+class WalkingChallengeScreen extends ConsumerStatefulWidget {
   const WalkingChallengeScreen({super.key});
 
   @override
-  State<WalkingChallengeScreen> createState() => _WalkingChallengeScreenState();
+  ConsumerState<WalkingChallengeScreen> createState() => _WalkingChallengeScreenState();
 }
 
-class _WalkingChallengeScreenState extends State<WalkingChallengeScreen> {
+class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen> {
   int _steps = 0;
   final int _targetSteps = 30;
 
@@ -32,38 +37,46 @@ class _WalkingChallengeScreenState extends State<WalkingChallengeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+    final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+    final secondaryColor = isNight ? HelioColors.nightSecondary : HelioColors.daySecondary;
     double progress = _steps / _targetSteps;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [HelioColors.backgroundDark, Color(0xFF1A2E1A)],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: SkyBackground(
         child: SafeArea(
           child: Column(
             children: [
               const SizedBox(height: 40),
-              Text('Step Mission', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
+              Text(
+                'Step Mission',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48),
                 child: Text(
-                  'Physical movement increases heart rate and cortisol levels, helping you naturally transition to wakefulness.',
+                  'Physical movement increases heart rate and cortisol levels, helping you wake up naturally.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: HelioColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ),
               const Spacer(),
-              _buildStepCounter(progress),
-              const SizedBox(height: 24),
-              Text(
-                '${_targetSteps - _steps} steps remaining',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: HelioColors.morningYellow),
+              _buildStepCounter(progress, textColor, primaryColor, secondaryColor),
+              const SizedBox(height: 32),
+              PremiumCard(
+                isGlass: isNight,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Text(
+                  '${_targetSteps - _steps} steps remaining',
+                  style: TextStyle(fontWeight: FontWeight.w800, color: secondaryColor, fontSize: 16),
+                ),
               ),
               const Spacer(),
               Padding(
@@ -74,17 +87,23 @@ class _WalkingChallengeScreenState extends State<WalkingChallengeScreen> {
                       : _steps < 20 
                           ? 'Almost there!' 
                           : 'Just a few more steps...',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: HelioColors.sunriseOrange,
-                      ),
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 40),
               // DEBUG BUTTON
-              TextButton(
+              TextButton.icon(
                 onPressed: _onStep,
-                child: const Text('DEBUG: SIMULATE STEP'),
+                icon: Icon(Icons.touch_app_rounded, color: textColor.withOpacity(0.3)),
+                label: Text(
+                  'SIMULATE STEP',
+                  style: TextStyle(color: textColor.withOpacity(0.3), fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 40),
             ],
@@ -94,31 +113,63 @@ class _WalkingChallengeScreenState extends State<WalkingChallengeScreen> {
     );
   }
 
-  Widget _buildStepCounter(double progress) {
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
+  }
+
+  Widget _buildStepCounter(double progress, Color textColor, Color primaryColor, Color secondaryColor) {
     return Stack(
       alignment: Alignment.center,
       children: [
+        // Glow effect
+        Container(
+          height: 260,
+          width: 260,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withOpacity(0.15),
+                blurRadius: 40,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+        ),
         SizedBox(
-          height: 250,
-          width: 250,
+          height: 260,
+          width: 260,
           child: CircularProgressIndicator(
             value: progress,
             strokeWidth: 20,
-            backgroundColor: Colors.white.withOpacity(0.1),
-            color: HelioColors.sunriseOrange,
+            strokeCap: StrokeCap.round,
+            backgroundColor: textColor.withOpacity(0.05),
+            color: secondaryColor,
           ),
         ),
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_walk, size: 60, color: HelioColors.morningYellow),
+            Icon(Icons.directions_walk_rounded, size: 64, color: primaryColor),
             Text(
               '$_steps',
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 80),
+              style: TextStyle(
+                fontSize: 88,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+                letterSpacing: -2,
+              ),
             ),
             Text(
-              '/ $_targetSteps steps',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: HelioColors.textSecondary),
+              'OF $_targetSteps',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: textColor.withOpacity(0.4),
+                letterSpacing: 2,
+              ),
             ),
           ],
         ),

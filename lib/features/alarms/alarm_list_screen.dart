@@ -1,10 +1,13 @@
-// lib/features/alarms/alarm_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/theme/theme_mode_enum.dart';
 import '../../models/alarm.dart';
 import '../../providers/alarm_provider.dart';
+import '../../widgets/theme/sky_background.dart';
+import '../../widgets/premium_card.dart';
 import 'create_alarm_screen.dart';
 
 class AlarmListScreen extends ConsumerStatefulWidget {
@@ -36,97 +39,86 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
   @override
   Widget build(BuildContext context) {
     final alarmsAsync = ref.watch(alarmNotifierProvider);
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
 
     return Scaffold(
-      backgroundColor: HelioColors.backgroundDark,
-      body: Stack(
-        children: [
-          // Ambient glow
-          Positioned(
-            bottom: -80,
-            right: -60,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    HelioColors.sunriseOrange.withOpacity(0.07),
-                    Colors.transparent,
+      backgroundColor: Colors.transparent,
+      body: SkyBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isNight) const SizedBox(height: 260),
+              // Header
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, isNight ? 0 : 20, 24, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ALARMS',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
+                                  letterSpacing: 2,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          alarmsAsync.when(
+                            data: (alarms) => Text(
+                              '${alarms.where((a) => a.isEnabled).length} Active',
+                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            loading: () => Text(
+                              '—',
+                              style: Theme.of(context).textTheme.displaySmall?.copyWith(color: textColor),
+                            ),
+                            error: (_, __) => const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _AddButton(
+                      onTap: () => _navigateToCreate(context),
+                      isNight: isNight,
+                    ),
                   ],
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ALARMS',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: HelioColors.textOrange,
-                                    letterSpacing: 2,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            alarmsAsync.when(
-                              data: (alarms) => Text(
-                                '${alarms.where((a) => a.isEnabled).length} Active',
-                                style: Theme.of(context).textTheme.displaySmall,
-                              ),
-                              loading: () => Text(
-                                '—',
-                                style: Theme.of(context).textTheme.displaySmall,
-                              ),
-                              error: (_, __) => const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Add button (header)
-                      _AddButton(onTap: () => _navigateToCreate(context)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // List
-                Expanded(
-                  child: alarmsAsync.when(
-                    data: (alarms) => alarms.isEmpty
-                        ? _buildEmptyState(context)
-                        : _buildList(context, alarms),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(
-                        color: HelioColors.sunriseOrange,
-                        strokeWidth: 2,
-                      ),
+              const SizedBox(height: 24),
+              // List
+              Expanded(
+                child: alarmsAsync.when(
+                  data: (alarms) => alarms.isEmpty
+                      ? _buildEmptyState(context, isNight, textColor)
+                      : _buildList(context, alarms, isNight),
+                  loading: () => Center(
+                    child: CircularProgressIndicator(
+                      color: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
+                      strokeWidth: 3,
                     ),
-                    error: (e, _) => Center(
-                      child: Text(
-                        'Error: $e',
-                        style: const TextStyle(color: HelioColors.error),
-                      ),
+                  ),
+                  error: (e, _) => Center(
+                    child: Text(
+                      'Error: $e',
+                      style: const TextStyle(color: HelioColors.error),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-      // FAB
       floatingActionButton: ScaleTransition(
         scale: CurvedAnimation(
           parent: _fabController,
@@ -134,9 +126,9 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
         ),
         child: FloatingActionButton.extended(
           onPressed: () => _navigateToCreate(context),
-          backgroundColor: HelioColors.sunriseOrange,
+          backgroundColor: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
           foregroundColor: Colors.white,
-          elevation: 0,
+          elevation: 8,
           icon: const Icon(Icons.add_rounded),
           label: const Text(
             'New Alarm',
@@ -150,6 +142,12 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
     );
   }
 
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
+  }
+
   void _navigateToCreate(BuildContext context) {
     HapticFeedback.lightImpact();
     Navigator.push(
@@ -158,14 +156,15 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
     );
   }
 
-  Widget _buildList(BuildContext context, List<Alarm> alarms) {
+  Widget _buildList(BuildContext context, List<Alarm> alarms, bool isNight) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
       itemCount: alarms.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 4),
       itemBuilder: (context, i) {
         return _AlarmCard(
           alarm: alarms[i],
+          isNight: isNight,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -183,7 +182,7 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, bool isNight, Color textColor) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -195,27 +194,30 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: HelioColors.cardDark,
-                border: Border.all(color: HelioColors.divider),
+                color: isNight ? Colors.white.withOpacity(0.05) : Colors.white,
+                border: Border.all(color: isNight ? Colors.white24 : Colors.black12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.alarm_add_rounded,
                 size: 40,
-                color: HelioColors.textTertiary,
+                color: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
               ),
             ),
             const SizedBox(height: 24),
             Text(
               'No alarms yet',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: HelioColors.textSecondary,
+                color: textColor,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Tap "New Alarm" to create your first wake-up mission.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: textColor.withOpacity(0.7),
+              ),
             ),
           ],
         ),
@@ -224,22 +226,20 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
   }
 }
 
-// ── Alarm Card ─────────────────────────────────────────────────────────────────
-
 class _AlarmCard extends StatelessWidget {
   final Alarm alarm;
+  final bool isNight;
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
   const _AlarmCard({
     required this.alarm,
+    required this.isNight,
     required this.onTap,
     required this.onToggle,
     required this.onDelete,
   });
-
-  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   @override
   Widget build(BuildContext context) {
@@ -247,8 +247,8 @@ class _AlarmCard extends StatelessWidget {
     final m = alarm.time.minute;
     final hour12 = h % 12 == 0 ? 12 : h % 12;
     final period = h >= 12 ? 'PM' : 'AM';
-    final timeStr =
-        '${hour12.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+    final timeStr = '${hour12.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
 
     return Dismissible(
       key: ValueKey(alarm.id),
@@ -257,103 +257,82 @@ class _AlarmCard extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
+        margin: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: HelioColors.error.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(20),
+          color: Colors.redAccent.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: const Icon(
           Icons.delete_outline_rounded,
-          color: HelioColors.error,
+          color: Colors.redAccent,
         ),
       ),
       child: GestureDetector(
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+        child: PremiumCard(
+          isGlass: isNight,
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: HelioColors.cardDark,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: alarm.isEnabled
-                  ? HelioColors.sunriseOrange.withOpacity(0.25)
-                  : HelioColors.divider,
-              width: alarm.isEnabled ? 1.5 : 1,
-            ),
-          ),
           child: Row(
             children: [
-              // Time
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Label
                     Text(
                       alarm.title,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: HelioColors.textTertiary,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textColor.withOpacity(0.5),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    // Time display
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
                           timeStr,
-                          style: Theme.of(context).textTheme.displayMedium
-                              ?.copyWith(
-                                color: alarm.isEnabled
-                                    ? HelioColors.textPrimary
-                                    : HelioColors.textTertiary,
-                                fontSize: 44,
-                                letterSpacing: -2,
-                              ),
+                          style: TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.w800,
+                            color: alarm.isEnabled ? textColor : textColor.withOpacity(0.3),
+                            letterSpacing: -1,
+                          ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 7, left: 4),
+                          padding: const EdgeInsets.only(bottom: 6, left: 4),
                           child: Text(
                             period,
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: alarm.isEnabled
-                                  ? HelioColors.textSecondary
-                                  : HelioColors.textTertiary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: alarm.isEnabled ? textColor.withOpacity(0.7) : textColor.withOpacity(0.2),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    // Days row + mission badge
+                    const SizedBox(height: 12),
                     Row(
                       children: [
-                        // Day indicators
                         if (alarm.repeatDays.isNotEmpty) ...[
-                          _DayChips(days: alarm.repeatDays),
-                          const SizedBox(width: 8),
+                          _DayChips(days: alarm.repeatDays, isNight: isNight),
+                          const SizedBox(width: 12),
                         ],
                         if (alarm.missionType != 'None')
-                          _MissionPill(type: alarm.missionType),
+                          _MissionPill(type: alarm.missionType, isNight: isNight),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              // Toggle
-              Column(
-                children: [
-                  Switch(
-                    value: alarm.isEnabled,
-                    onChanged: (_) {
-                      HapticFeedback.lightImpact();
-                      onToggle();
-                    },
-                  ),
-                ],
+              Switch(
+                value: alarm.isEnabled,
+                activeColor: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
+                onChanged: (_) {
+                  HapticFeedback.lightImpact();
+                  onToggle();
+                },
               ),
             ],
           ),
@@ -365,24 +344,24 @@ class _AlarmCard extends StatelessWidget {
 
 class _DayChips extends StatelessWidget {
   final List<int> days;
-  const _DayChips({required this.days});
+  final bool isNight;
+  const _DayChips({required this.days, required this.isNight});
   static const _labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
     return Row(
       children: List.generate(7, (i) {
         final active = days.contains(i);
         return Padding(
-          padding: const EdgeInsets.only(right: 3),
+          padding: const EdgeInsets.only(right: 4),
           child: Text(
             _labels[i],
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-              color: active
-                  ? HelioColors.sunriseOrange
-                  : HelioColors.textTertiary,
+              fontSize: 11,
+              fontWeight: active ? FontWeight.w900 : FontWeight.w400,
+              color: active ? activeColor : (isNight ? Colors.white30 : Colors.black26),
             ),
           ),
         );
@@ -393,32 +372,30 @@ class _DayChips extends StatelessWidget {
 
 class _MissionPill extends StatelessWidget {
   final String type;
-  const _MissionPill({required this.type});
+  final bool isNight;
+  const _MissionPill({required this.type, required this.isNight});
 
   @override
   Widget build(BuildContext context) {
+    final color = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: HelioColors.glassOrange20,
-        borderRadius: BorderRadius.circular(6),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.bolt_rounded,
-            size: 10,
-            color: HelioColors.sunriseOrange,
-          ),
-          const SizedBox(width: 3),
+          Icon(Icons.bolt_rounded, size: 12, color: color),
+          const SizedBox(width: 4),
           Text(
             type,
-            style: const TextStyle(
-              color: HelioColors.sunriseOrange,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -429,25 +406,23 @@ class _MissionPill extends StatelessWidget {
 
 class _AddButton extends StatelessWidget {
   final VoidCallback onTap;
-  const _AddButton({required this.onTap});
+  final bool isNight;
+  const _AddButton({required this.onTap, required this.isNight});
 
   @override
   Widget build(BuildContext context) {
+    final color = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
-          color: HelioColors.glassOrange20,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: HelioColors.sunriseOrange.withOpacity(0.4)),
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
-        child: const Icon(
-          Icons.add_rounded,
-          color: HelioColors.sunriseOrange,
-          size: 22,
-        ),
+        child: Icon(Icons.add_rounded, color: color, size: 28),
       ),
     );
   }

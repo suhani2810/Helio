@@ -42,6 +42,7 @@ dependencies:
   riverpod_annotation: ^2.6.1
   shared_preferences: ^2.2.0
   rive: ^0.11.0
+  lottie: ^2.7.0
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/181-339-weather-icon.riv
+    - assets/moon_animation.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

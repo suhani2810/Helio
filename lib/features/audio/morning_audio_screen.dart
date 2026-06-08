@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/theme/theme_mode_enum.dart';
+import '../../widgets/theme/sky_background.dart';
+import '../../widgets/premium_card.dart';
 
-class MorningAudioScreen extends StatefulWidget {
+class MorningAudioScreen extends ConsumerStatefulWidget {
   const MorningAudioScreen({super.key});
 
   @override
-  State<MorningAudioScreen> createState() => _MorningAudioScreenState();
+  ConsumerState<MorningAudioScreen> createState() => _MorningAudioScreenState();
 }
 
-class _MorningAudioScreenState extends State<MorningAudioScreen> {
+class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
   String? _selectedAudio = 'Forest Birds';
   double _volume = 0.5;
   bool _fadeEnabled = true;
@@ -23,134 +28,207 @@ class _MorningAudioScreenState extends State<MorningAudioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+    final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Morning Audio'),
-        backgroundColor: Colors.transparent,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sunrise Soundscape',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _audioList.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final audio = _audioList[index];
-                final isSelected = _selectedAudio == audio['name'];
-                return _buildAudioTile(audio, isSelected);
-              },
-            ),
-            const SizedBox(height: 40),
-            Text(
-              'Audio Settings',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            _buildVolumeSlider(),
-            _buildFadeSwitch(),
-            const SizedBox(height: 60),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: HelioColors.sunriseOrange,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+      backgroundColor: Colors.transparent,
+      body: SkyBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_rounded, color: textColor),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(
+                      'Morning Audio',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sunrise Soundscape',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _audioList.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final audio = _audioList[index];
+                          final isSelected = _selectedAudio == audio['name'];
+                          return _buildAudioTile(audio, isSelected, isNight, textColor, primaryColor);
+                        },
+                      ),
+                      const SizedBox(height: 40),
+                      Text(
+                        'Audio Settings',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildVolumeSlider(isNight, textColor, primaryColor),
+                      _buildFadeSwitch(isNight, textColor, primaryColor),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 8,
+                            shadowColor: primaryColor.withOpacity(0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Save Selection',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Text(
-                  'Save Selection',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAudioTile(Map<String, dynamic> audio, bool isSelected) {
-    return InkWell(
-      onTap: () => setState(() => _selectedAudio = audio['name'] as String),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? HelioColors.sunriseOrange.withOpacity(0.1)
-              : HelioColors.cardDark,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? HelioColors.sunriseOrange
-                : Colors.white.withOpacity(0.05),
+            ],
           ),
         ),
-        child: Row(
-          children: [
-            Icon(
-              audio['icon'] as IconData,
-              color: isSelected
-                  ? HelioColors.sunriseOrange
-                  : HelioColors.textSecondary,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              audio['name'] as String,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected
-                    ? HelioColors.textPrimary
-                    : HelioColors.textSecondary,
+      ),
+    );
+  }
+
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
+  }
+
+  Widget _buildAudioTile(Map<String, dynamic> audio, bool isSelected, bool isNight, Color textColor, Color primaryColor) {
+    return GestureDetector(
+      onTap: () => setState(() => _selectedAudio = audio['name'] as String),
+      child: PremiumCard(
+        isGlass: isNight,
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          decoration: isSelected && !isNight
+              ? BoxDecoration(
+                  color: primaryColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(24),
+                )
+              : null,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (isSelected ? primaryColor : textColor).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  audio['icon'] as IconData,
+                  color: isSelected ? primaryColor : textColor.withOpacity(0.5),
+                ),
               ),
-            ),
-            const Spacer(),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: HelioColors.sunriseOrange),
-          ],
+              const SizedBox(width: 16),
+              Text(
+                audio['name'] as String,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontSize: 16,
+                  color: isSelected ? primaryColor : textColor,
+                ),
+              ),
+              const Spacer(),
+              if (isSelected)
+                Icon(Icons.check_circle_rounded, color: primaryColor),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildVolumeSlider() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [const Text('Volume'), Text('${(_volume * 100).toInt()}%')],
-        ),
-        Slider(
-          value: _volume,
-          onChanged: (val) => setState(() => _volume = val),
-          activeColor: HelioColors.sunriseOrange,
-        ),
-      ],
+  Widget _buildVolumeSlider(bool isNight, Color textColor, Color primaryColor) {
+    return PremiumCard(
+      isGlass: isNight,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Volume',
+                style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+              ),
+              Text(
+                '${(_volume * 100).toInt()}%',
+                style: TextStyle(color: primaryColor, fontWeight: FontWeight.w800),
+              )
+            ],
+          ),
+          Slider(
+            value: _volume,
+            onChanged: (val) => setState(() => _volume = val),
+            activeColor: primaryColor,
+            inactiveColor: primaryColor.withOpacity(0.2),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildFadeSwitch() {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: const Text('Gradient Fade-in'),
-      subtitle: const Text('Slowly increase volume over sunrise'),
-      trailing: Switch(
-        value: _fadeEnabled,
-        onChanged: (val) => setState(() => _fadeEnabled = val),
-        activeThumbColor: HelioColors.sunriseOrange,
+  Widget _buildFadeSwitch(bool isNight, Color textColor, Color primaryColor) {
+    return PremiumCard(
+      isGlass: isNight,
+      padding: const EdgeInsets.all(8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        title: Text(
+          'Gradient Fade-in',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          'Slowly increase volume over sunrise',
+          style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 12),
+        ),
+        trailing: Switch(
+          value: _fadeEnabled,
+          onChanged: (val) => setState(() => _fadeEnabled = val),
+          activeColor: primaryColor,
+        ),
       ),
     );
   }

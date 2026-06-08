@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/theme/theme_mode_enum.dart';
+import '../../widgets/theme/sky_background.dart';
+import '../../widgets/premium_card.dart';
 
-class TilePuzzleScreen extends StatefulWidget {
+class TilePuzzleScreen extends ConsumerStatefulWidget {
   const TilePuzzleScreen({super.key});
 
   @override
-  State<TilePuzzleScreen> createState() => _TilePuzzleScreenState();
+  ConsumerState<TilePuzzleScreen> createState() => _TilePuzzleScreenState();
 }
 
-class _TilePuzzleScreenState extends State<TilePuzzleScreen> {
+class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
   final List<int?> _tiles = List.generate(8, (index) => index + 1)..add(null);
 
   @override
@@ -21,12 +26,13 @@ class _TilePuzzleScreenState extends State<TilePuzzleScreen> {
     int? emptyIndex;
     if (index > 0 && _tiles[index - 1] == null) {
       emptyIndex = index - 1;
-    } else if (index < 8 && _tiles[index + 1] == null)
+    } else if (index < 8 && _tiles[index + 1] == null) {
       emptyIndex = index + 1;
-    else if (index > 2 && _tiles[index - 3] == null)
+    } else if (index > 2 && _tiles[index - 3] == null) {
       emptyIndex = index - 3;
-    else if (index < 6 && _tiles[index + 3] == null)
+    } else if (index < 6 && _tiles[index + 3] == null) {
       emptyIndex = index + 3;
+    }
 
     if (emptyIndex != null) {
       setState(() {
@@ -57,61 +63,119 @@ class _TilePuzzleScreenState extends State<TilePuzzleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+    final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Tile Puzzle')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Rearrange tiles in order'),
-            const SizedBox(height: 32),
-            Container(
-              width: 300,
-              height: 300,
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: HelioColors.cardDark,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 4,
-                  crossAxisSpacing: 4,
-                ),
-                itemCount: 9,
-                itemBuilder: (context, index) {
-                  final tile = _tiles[index];
-                  if (tile == null) return const SizedBox.shrink();
-                  return GestureDetector(
-                    onTap: () => _onTileTap(index),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: HelioColors.sunriseOrange,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$tile',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+      backgroundColor: Colors.transparent,
+      body: SkyBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_rounded, color: textColor),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(
+                      'Tile Puzzle',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-            TextButton(
-              onPressed: () => setState(() => _tiles.shuffle()),
-              child: const Text('Shuffle Again'),
-            ),
-          ],
+              const Spacer(),
+              Text(
+                'Rearrange in order (1-8)',
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 32),
+              PremiumCard(
+                isGlass: isNight,
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  width: 320,
+                  height: 320,
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                    ),
+                    itemCount: 9,
+                    itemBuilder: (context, index) {
+                      final tile = _tiles[index];
+                      if (tile == null) return const SizedBox.shrink();
+                      return GestureDetector(
+                        onTap: () => _onTileTap(index),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$tile',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 48),
+              TextButton.icon(
+                onPressed: () => setState(() => _tiles.shuffle()),
+                icon: Icon(Icons.refresh_rounded, color: primaryColor),
+                label: Text(
+                  'SHUFFLE AGAIN',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
   }
 }

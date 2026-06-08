@@ -8,6 +8,7 @@ class SkyTheme extends ThemeExtension<SkyTheme> {
   final Color? cloudColor;
   final Color? starColor;
   final Color? cardColor;
+  final Color? accentColor;
 
   const SkyTheme({
     this.skyGradient,
@@ -16,6 +17,7 @@ class SkyTheme extends ThemeExtension<SkyTheme> {
     this.cloudColor,
     this.starColor,
     this.cardColor,
+    this.accentColor,
   });
 
   @override
@@ -26,6 +28,7 @@ class SkyTheme extends ThemeExtension<SkyTheme> {
     Color? cloudColor,
     Color? starColor,
     Color? cardColor,
+    Color? accentColor,
   }) {
     return SkyTheme(
       skyGradient: skyGradient ?? this.skyGradient,
@@ -34,6 +37,7 @@ class SkyTheme extends ThemeExtension<SkyTheme> {
       cloudColor: cloudColor ?? this.cloudColor,
       starColor: starColor ?? this.starColor,
       cardColor: cardColor ?? this.cardColor,
+      accentColor: accentColor ?? this.accentColor,
     );
   }
 
@@ -47,6 +51,7 @@ class SkyTheme extends ThemeExtension<SkyTheme> {
       cloudColor: Color.lerp(cloudColor, other.cloudColor, t),
       starColor: Color.lerp(starColor, other.starColor, t),
       cardColor: Color.lerp(cardColor, other.cardColor, t),
+      accentColor: Color.lerp(accentColor, other.accentColor, t),
     );
   }
 }

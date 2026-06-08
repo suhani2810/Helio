@@ -1,38 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/design_system/theme.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
+import 'core/theme/theme_mode_enum.dart';
 import 'navigation_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Force dark status bar icons (light text on dark bg)
+  
+  // Force translucent status bar
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.dark,
     ),
   );
+  
   // Lock to portrait
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  
   runApp(const ProviderScope(child: HelioApp()));
 }
 
-class HelioApp extends StatelessWidget {
+class HelioApp extends ConsumerWidget {
   const HelioApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeControllerProvider);
+    
+    // Determine the actual theme mode to use for MaterialApp
+    ThemeMode materialThemeMode;
+    switch (mode) {
+      case AppThemeMode.day:
+        materialThemeMode = ThemeMode.light;
+        break;
+      case AppThemeMode.night:
+        materialThemeMode = ThemeMode.dark;
+        break;
+      case AppThemeMode.auto:
+        materialThemeMode = ThemeMode.system;
+        break;
+    }
+
     return MaterialApp(
       title: 'Helio',
       debugShowCheckedModeBanner: false,
-      theme: HelioTheme.darkTheme,
-      darkTheme: HelioTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      theme: AppTheme.dayTheme,
+      darkTheme: AppTheme.nightTheme,
+      themeMode: materialThemeMode,
       home: const NavigationWrapper(),
     );
   }

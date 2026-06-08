@@ -1,19 +1,23 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/design_system/colors.dart';
+import 'core/theme/theme_provider.dart';
+import 'core/theme/theme_mode_enum.dart';
 import 'features/home/home_screen.dart';
 import 'features/alarms/alarm_list_screen.dart';
 import 'features/insights/insights_dashboard.dart';
 import 'features/settings/profile_screen.dart';
 
-class NavigationWrapper extends StatefulWidget {
+class NavigationWrapper extends ConsumerStatefulWidget {
   const NavigationWrapper({super.key});
 
   @override
-  State<NavigationWrapper> createState() => _NavigationWrapperState();
+  ConsumerState<NavigationWrapper> createState() => _NavigationWrapperState();
 }
 
-class _NavigationWrapperState extends State<NavigationWrapper>
+class _NavigationWrapperState extends ConsumerState<NavigationWrapper>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   late final List<AnimationController> _iconControllers;
@@ -56,77 +60,97 @@ class _NavigationWrapperState extends State<NavigationWrapper>
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: _HelioNavBar(
+      bottomNavigationBar: _PremiumNavBar(
         currentIndex: _currentIndex,
         onTap: _onTap,
         controllers: _iconControllers,
+        isNight: isNight,
       ),
     );
   }
+
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
+  }
 }
 
-class _HelioNavBar extends StatelessWidget {
+class _PremiumNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final List<AnimationController> controllers;
+  final bool isNight;
 
-  const _HelioNavBar({
+  const _PremiumNavBar({
     required this.currentIndex,
     required this.onTap,
     required this.controllers,
+    required this.isNight,
   });
 
   static const _items = [
-    _NavItem(
-      icon: Icons.wb_sunny_outlined,
-      activeIcon: Icons.wb_sunny_rounded,
-      label: 'Home',
-    ),
-    _NavItem(
-      icon: Icons.alarm_outlined,
-      activeIcon: Icons.alarm_rounded,
-      label: 'Alarms',
-    ),
-    _NavItem(
-      icon: Icons.auto_graph_outlined,
-      activeIcon: Icons.auto_graph_rounded,
-      label: 'Insights',
-    ),
-    _NavItem(
-      icon: Icons.person_outline_rounded,
-      activeIcon: Icons.person_rounded,
-      label: 'Profile',
-    ),
+    _NavItem(icon: Icons.wb_sunny_outlined, activeIcon: Icons.wb_sunny_rounded, label: 'Home'),
+    _NavItem(icon: Icons.alarm_outlined, activeIcon: Icons.alarm_rounded, label: 'Alarms'),
+    _NavItem(icon: Icons.auto_graph_outlined, activeIcon: Icons.auto_graph_rounded, label: 'Insights'),
+    _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80 + MediaQuery.of(context).padding.bottom,
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      height: 76,
       decoration: BoxDecoration(
-        color: HelioColors.navBarBg,
-        border: const Border(
-          top: BorderSide(color: HelioColors.divider, width: 0.5),
-        ),
+        borderRadius: BorderRadius.circular(38),
+        boxShadow: [
+          BoxShadow(
+            color: isNight 
+                ? const Color(0xFF7C9DFF).withOpacity(0.1) 
+                : Colors.black.withOpacity(0.08),
+            blurRadius: 30,
+            spreadRadius: -5,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(_items.length, (index) {
-              final isSelected = index == currentIndex;
-              return _NavTile(
-                item: _items[index],
-                isSelected: isSelected,
-                controller: controllers[index],
-                onTap: () => onTap(index),
-              );
-            }),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(38),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: isNight 
+                  ? const Color(0xFF071330).withOpacity(0.5) 
+                  : Colors.white.withOpacity(0.85),
+              borderRadius: BorderRadius.circular(38),
+              border: Border.all(
+                color: isNight 
+                    ? Colors.white.withOpacity(0.08) 
+                    : Colors.white.withOpacity(0.5),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_items.length, (index) {
+                final isSelected = index == currentIndex;
+                return _NavTile(
+                  item: _items[index],
+                  isSelected: isSelected,
+                  controller: controllers[index],
+                  onTap: () => onTap(index),
+                  isNight: isNight,
+                );
+              }),
+            ),
           ),
         ),
       ),
@@ -139,66 +163,58 @@ class _NavTile extends StatelessWidget {
   final bool isSelected;
   final AnimationController controller;
   final VoidCallback onTap;
+  final bool isNight;
 
   const _NavTile({
     required this.item,
     required this.isSelected,
     required this.controller,
     required this.onTap,
+    required this.isNight,
   });
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+    final inactiveColor = isNight ? Colors.white54 : HelioColors.dayText.withOpacity(0.4);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (context, child) {
-          return SizedBox(
-            width: 72,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelected ? activeColor.withOpacity(0.1) : Colors.transparent,
+              shape: BoxShape.circle,
+              boxShadow: [
+                if (isSelected && isNight)
+                  BoxShadow(
+                    color: activeColor.withOpacity(0.3),
+                    blurRadius: 12,
+                    spreadRadius: 2,
                   ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? HelioColors.glassOrange20
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Icon(
-                    isSelected ? item.activeIcon : item.icon,
-                    color: isSelected
-                        ? HelioColors.sunriseOrange
-                        : HelioColors.textTertiary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected
-                        ? HelioColors.sunriseOrange
-                        : HelioColors.textTertiary,
-                    letterSpacing: 0.2,
-                  ),
-                  child: Text(item.label),
-                ),
               ],
             ),
-          );
-        },
+            child: Icon(
+              isSelected ? item.activeIcon : item.icon,
+              color: isSelected ? activeColor : inactiveColor,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? activeColor : inactiveColor,
+            ),
+          ),
+        ],
       ),
     );
   }

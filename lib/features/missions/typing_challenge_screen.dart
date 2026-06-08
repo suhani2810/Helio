@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
+import '../../core/theme/theme_provider.dart';
+import '../../core/theme/theme_mode_enum.dart';
+import '../../widgets/theme/sky_background.dart';
+import '../../widgets/premium_card.dart';
 
-class TypingChallengeScreen extends StatefulWidget {
+class TypingChallengeScreen extends ConsumerStatefulWidget {
   const TypingChallengeScreen({super.key});
 
   @override
-  State<TypingChallengeScreen> createState() => _TypingChallengeScreenState();
+  ConsumerState<TypingChallengeScreen> createState() => _TypingChallengeScreenState();
 }
 
-class _TypingChallengeScreenState extends State<TypingChallengeScreen> {
+class _TypingChallengeScreenState extends ConsumerState<TypingChallengeScreen> {
   final String _target = 'The sun is rising and so am I.';
   final TextEditingController _controller = TextEditingController();
 
@@ -33,55 +38,87 @@ class _TypingChallengeScreenState extends State<TypingChallengeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+    final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Typing Mission')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            Text(
-              'Type the following:',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: HelioColors.cardDark,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Text(
-                _target,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: HelioColors.sunriseOrange,
+      backgroundColor: Colors.transparent,
+      body: SkyBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_rounded, color: textColor),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      Text(
+                        'Typing Mission',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Text(
+                  'Type the following exactly:',
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.6),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                PremiumCard(
+                  isGlass: isNight,
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    _target,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: primaryColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                PremiumCard(
+                  isGlass: isNight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    style: TextStyle(fontSize: 18, color: textColor, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: 'Start typing...',
+                      hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
+                      border: InputBorder.none,
                     ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 40),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              style: const TextStyle(fontSize: 18),
-              decoration: InputDecoration(
-                hintText: 'Start typing...',
-                filled: true,
-                fillColor: HelioColors.cardDark,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+                  ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: HelioColors.sunriseOrange),
-                ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  bool _isNightMode(AppThemeMode mode, int hour) {
+    if (mode == AppThemeMode.night) return true;
+    if (mode == AppThemeMode.day) return false;
+    return hour < 5 || hour >= 19;
   }
 }
