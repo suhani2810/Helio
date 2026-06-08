@@ -1,28 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/theme/app_theme.dart';
-import 'core/theme/theme_provider.dart';
+import 'core/design_system/theme.dart';
 import 'navigation_wrapper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Force dark status bar icons (light text on dark bg)
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ),
+  );
+  // Lock to portrait
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const ProviderScope(child: HelioApp()));
 }
 
-class HelioApp extends ConsumerWidget {
+class HelioApp extends StatelessWidget {
   const HelioApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = ref
-        .read(themeControllerProvider.notifier)
-        .isDarkModeForHour();
-
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Helio',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dayTheme,
-      darkTheme: AppTheme.nightTheme,
-      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      theme: HelioTheme.darkTheme,
+      darkTheme: HelioTheme.darkTheme,
+      themeMode: ThemeMode.dark,
       home: const NavigationWrapper(),
     );
   }

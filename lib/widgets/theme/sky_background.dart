@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rive/rive.dart' as rive;
 import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
@@ -61,7 +62,7 @@ class SkyBackground extends ConsumerWidget {
         child: SizedBox.expand(
           child: Stack(
             children: [
-              if (!isNight)
+              if (!isNight && segment != DaySegment.day)
                 Positioned(
                   top: 24,
                   left: 24,
@@ -70,7 +71,7 @@ class SkyBackground extends ConsumerWidget {
                     color: sky?.sunColor ?? const Color(0xFFFFD54F),
                   ),
                 ),
-              if (!isNight)
+              if (!isNight && segment != DaySegment.day)
                 Positioned(
                   top: 140,
                   left: -20,
@@ -78,6 +79,27 @@ class SkyBackground extends ConsumerWidget {
                   child: AnimatedClouds(
                     height: 80,
                     color: sky?.cloudColor ?? Colors.white,
+                  ),
+                ),
+              if (!isNight && segment == DaySegment.day)
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        top: 24,
+                        left: 20,
+                        right: 20,
+                      ),
+                      child: SizedBox(
+                        height: 280,
+                        child: rive.RiveAnimation.asset(
+                          'assets/181-339-weather-icon.riv',
+                          fit: BoxFit.contain,
+                          alignment: Alignment.topCenter,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               if (isNight)

@@ -19,43 +19,47 @@ class HomeScreen extends ConsumerWidget {
         child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 80),
-              _buildSunriseVisual(),
-              const SizedBox(height: 24),
-              Text('12:45 PM', style: Theme.of(context).textTheme.displayLarge),
-              const SizedBox(height: 6),
-              const Text(
-                'Tuesday, June 2',
-                style: TextStyle(color: HelioColors.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildQuickAction(
-                    context,
-                    Icons.mood,
-                    'Log Mood',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MoodTrackingScreen(),
-                      ),
+              const Spacer(),
+              Center(
+                child: Column(
+                  children: [
+                    Text('12:45 PM', style: Theme.of(context).textTheme.displayLarge),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Tuesday, June 2',
+                      style: TextStyle(color: HelioColors.textSecondary),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  _buildQuickAction(
-                    context,
-                    Icons.play_circle_outline,
-                    'Test Missions',
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MissionPreviewScreen(),
-                      ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildQuickAction(
+                          context,
+                          Icons.mood,
+                          'Log Mood',
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MoodTrackingScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        _buildQuickAction(
+                          context,
+                          Icons.play_circle_outline,
+                          'Test Missions',
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MissionPreviewScreen(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const Spacer(),
               alarmsAsync.when(
@@ -141,41 +145,6 @@ class HomeScreen extends ConsumerWidget {
           fontSize: 10,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSunriseVisual() {
-    return Container(
-      height: 200,
-      width: 200,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: HelioColors.sunriseOrange.withOpacity(0.3),
-            blurRadius: 40,
-            spreadRadius: 10,
-          ),
-        ],
-        gradient: const RadialGradient(
-          colors: [
-            HelioColors.morningYellow,
-            HelioColors.sunriseOrange,
-            Colors.transparent,
-          ],
-          stops: [0.3, 0.6, 1.0],
-        ),
-      ),
-      child: Center(
-        child: Container(
-          height: 100,
-          width: 100,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: HelioColors.morningYellow,
-          ),
         ),
       ),
     );
