@@ -1,42 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/design_system/colors.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../models/alarm_entity.dart';
+import '../../providers/time_provider.dart';
 import '../missions/math_challenge_screen.dart';
 import '../missions/typing_challenge_screen.dart';
 import '../missions/shake_challenge_screen.dart';
 import '../missions/walking_challenge_screen.dart';
 import '../missions/tile_puzzle_screen.dart';
-import '../missions/object_detection_setup_screen.dart';
+import '../missions/object_detection_mission_screen.dart';
 
 class AlarmRingingScreen extends ConsumerWidget {
-  final String missionType;
+  final AlarmEntity? alarm;
 
-  const AlarmRingingScreen({super.key, required this.missionType});
+  const AlarmRingingScreen({super.key, this.alarm});
 
   void _startMission(BuildContext context) {
+    final missionType = alarm?.missionType ?? 'None';
+    final scheduledTime = alarm?.alarmTime ?? DateTime.now();
+
     Widget missionScreen;
     switch (missionType) {
       case 'Math':
-        missionScreen = const MathChallengeScreen();
+        missionScreen = MathChallengeScreen(scheduledTime: scheduledTime);
         break;
       case 'Typing':
-        missionScreen = const TypingChallengeScreen();
+        missionScreen = TypingChallengeScreen(scheduledTime: scheduledTime);
         break;
       case 'Shake':
-        missionScreen = const ShakeChallengeScreen();
+        missionScreen = ShakeChallengeScreen(scheduledTime: scheduledTime);
         break;
       case 'Walking':
-        missionScreen = const WalkingChallengeScreen();
+        missionScreen = WalkingChallengeScreen(scheduledTime: scheduledTime);
         break;
       case 'Tile Puzzle':
-        missionScreen = const TilePuzzleScreen();
+        missionScreen = TilePuzzleScreen(scheduledTime: scheduledTime);
         break;
       case 'Object Detection':
-        missionScreen = const ObjectDetectionSetupScreen();
+        missionScreen = ObjectDetectionMissionScreen(scheduledTime: scheduledTime);
         break;
       default:
         Navigator.pop(context);
@@ -52,9 +58,13 @@ class AlarmRingingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeControllerProvider);
-    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final now = ref.watch(currentTimeProvider).value ?? DateTime.now();
+    final isNight = _isNightMode(themeMode, now.hour);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+    
+    final timeStr = DateFormat('hh:mm a').format(now);
+    final missionType = alarm?.missionType ?? 'None';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -73,9 +83,9 @@ class AlarmRingingScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                '07:00 AM',
+                timeStr,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: 88,
+                      fontSize: 80,
                       fontWeight: FontWeight.w900,
                       color: textColor,
                       letterSpacing: -2,

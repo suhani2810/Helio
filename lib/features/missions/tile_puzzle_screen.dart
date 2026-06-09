@@ -5,9 +5,17 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../core/services/mission_service.dart';
 
 class TilePuzzleScreen extends ConsumerStatefulWidget {
-  const TilePuzzleScreen({super.key});
+  final bool isPreview;
+  final DateTime? scheduledTime;
+
+  const TilePuzzleScreen({
+    super.key,
+    this.isPreview = false,
+    this.scheduledTime,
+  });
 
   @override
   ConsumerState<TilePuzzleScreen> createState() => _TilePuzzleScreenState();
@@ -43,7 +51,7 @@ class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
     }
   }
 
-  void _checkWin() {
+  void _checkWin() async {
     bool win = true;
     for (int i = 0; i < 8; i++) {
       if (_tiles[i] != i + 1) {
@@ -52,11 +60,27 @@ class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
       }
     }
     if (win) {
+      if (!widget.isPreview) {
+        await ref.read(missionServiceProvider).completeMission(
+          missionType: 'Tile Puzzle',
+          scheduledTime: widget.scheduledTime ?? DateTime.now(),
+        );
+      }
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Puzzle Solved! Focus level: High.')),
+        SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Puzzle Solved! Focus level: High.')),
       );
+      
       Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          if (widget.isPreview) {
+            Navigator.pop(context);
+          } else {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        }
       });
     }
   }
@@ -71,6 +95,7 @@ class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SkyBackground(
+        showForeground: false,
         child: SafeArea(
           child: Column(
             children: [
@@ -97,7 +122,7 @@ class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
               Text(
                 'Rearrange in order (1-8)',
                 style: TextStyle(
-                  color: textColor.withOpacity(0.6),
+                  color: textColor.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
                 ),
@@ -106,7 +131,7 @@ class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
               PremiumCard(
                 isGlass: isNight,
                 padding: const EdgeInsets.all(12),
-                child: Container(
+                child: SizedBox(
                   width: 320,
                   height: 320,
                   child: GridView.builder(
@@ -129,7 +154,7 @@ class _TilePuzzleScreenState extends ConsumerState<TilePuzzleScreen> {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: primaryColor.withOpacity(0.3),
+                                color: primaryColor.withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),

@@ -5,6 +5,9 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../providers/stats_provider.dart';
+import '../../providers/repository_providers.dart';
+import '../../models/mood_entry_entity.dart';
 
 class MoodTrackingScreen extends ConsumerStatefulWidget {
   const MoodTrackingScreen({super.key});
@@ -17,11 +20,11 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
   String? _selectedMood;
 
   final List<Map<String, dynamic>> _moods = [
-    {'label': 'Excellent', 'emoji': '🤩', 'color': Colors.orange},
+    {'label': 'Great', 'emoji': '🤩', 'color': Colors.orange},
     {'label': 'Good', 'emoji': '😊', 'color': Colors.yellow},
-    {'label': 'Okay', 'emoji': '😐', 'color': Colors.blue},
-    {'label': 'Tired', 'emoji': '🥱', 'color': Colors.purple},
-    {'label': 'Stressed', 'emoji': '😫', 'color': Colors.red},
+    {'label': 'Neutral', 'emoji': '😐', 'color': Colors.blue},
+    {'label': 'Low', 'emoji': '🥱', 'color': Colors.purple},
+    {'label': 'Exhausted', 'emoji': '😫', 'color': Colors.red},
   ];
 
   @override
@@ -30,6 +33,8 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     final isNight = _isNightMode(themeMode, DateTime.now().hour);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
+    final moodHistoryAsync = ref.watch(_moodHistoryProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -50,7 +55,10 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                     ),
                     if (_selectedMood != null)
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () async {
+                          await ref.read(moodNotifierProvider.notifier).setMood(_selectedMood!);
+                          if (mounted) Navigator.pop(context);
+                        },
                         child: Text(
                           'Save',
                           style: TextStyle(
@@ -93,7 +101,11 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildHistoryTimeline(isNight, textColor, primaryColor),
+                moodHistoryAsync.when(
+                  data: (history) => _buildHistoryTimeline(history, isNight, textColor, primaryColor),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Text('Error: $e'),
+                ),
                 const SizedBox(height: 100),
               ],
             ),
@@ -111,7 +123,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
 
   Widget _buildMoodSelector(bool isNight, Color textColor) {
     return SizedBox(
-      height: 110,
+      height: 130,
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
         scrollDirection: Axis.horizontal,
@@ -213,12 +225,13 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
   }
 
   Widget _buildStatisticsRow(bool isNight, Color textColor) {
+    final streakAsync = ref.watch(streakNotifierProvider);
     return Row(
       children: [
         Expanded(
           child: _StatCard(
             label: 'Streak',
-            value: '5 Days',
+            value: streakAsync.when(data: (s) => '$s Days', loading: () => '—', error: (_, __) => '—'),
             icon: Icons.local_fire_department_rounded,
             color: Colors.orange,
             isNight: isNight,
@@ -228,7 +241,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _StatCard(
-            label: 'Frequent',
+            label: 'Status',
             value: 'Energized',
             icon: Icons.mood_rounded,
             color: Colors.amber,
@@ -240,15 +253,18 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     );
   }
 
-  Widget _buildHistoryTimeline(bool isNight, Color textColor, Color primaryColor) {
-    final history = [
-      {'date': 'Today', 'mood': 'Excellent', 'time': '7:00 AM'},
-      {'date': 'Yesterday', 'mood': 'Good', 'time': '6:45 AM'},
-      {'date': 'Jan 30', 'mood': 'Stressed', 'time': '8:15 AM'},
-    ];
-
+  Widget _buildHistoryTimeline(List<MoodEntryEntity> history, bool isNight, Color textColor, Color primaryColor) {
+    if (history.isEmpty) {
+      return Center(
+        child: Text(
+          'No history yet',
+          style: TextStyle(color: textColor.withOpacity(0.5)),
+        ),
+      );
+    }
     return Column(
       children: history.map((item) {
+        final dateStr = item.date.day == DateTime.now().day ? 'Today' : '${item.date.day}/${item.date.month}';
         return PremiumCard(
           isGlass: isNight,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -258,17 +274,10 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['date']!,
+                    dateStr,
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       color: textColor,
-                    ),
-                  ),
-                  Text(
-                    item['time']!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: textColor.withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -281,7 +290,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  item['mood']!,
+                  item.mood,
                   style: TextStyle(
                     color: primaryColor,
                     fontWeight: FontWeight.w800,
@@ -296,6 +305,10 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     );
   }
 }
+
+final _moodHistoryProvider = FutureProvider<List<MoodEntryEntity>>((ref) {
+  return ref.watch(moodRepositoryProvider).getMoodHistory();
+});
 
 class _StatCard extends StatelessWidget {
   final String label;

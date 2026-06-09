@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/design_system/colors.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../../providers/alarm_provider.dart';
+import '../../providers/stats_provider.dart';
+import '../../providers/repository_providers.dart';
+import '../../providers/time_provider.dart';
 import '../missions/mission_preview_screen.dart';
 import '../mood/mood_tracking_screen.dart';
 
@@ -15,7 +19,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeControllerProvider);
-    final now = DateTime.now();
+    final now = ref.watch(currentTimeProvider).value ?? DateTime.now();
     final isNight = _isNightMode(themeMode, now.hour);
 
     return Scaffold(
@@ -32,9 +36,9 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 32),
                 _buildActionButtons(context, isNight),
                 const SizedBox(height: 24),
-                _buildDailyStreakCard(context, isNight),
-                _buildTodaysGoalCard(context, isNight),
-                _buildMoodCard(context, isNight),
+                _buildDailyStreakCard(context, ref, isNight),
+                _buildTodaysGoalCard(context, ref, isNight),
+                _buildMoodCard(context, ref, isNight),
                 _buildNextAlarmSection(context, ref, isNight),
                 const SizedBox(height: 80), // Space for floating nav bar
               ],
@@ -53,8 +57,8 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, DateTime now, bool isNight) {
     final greeting = _getGreeting(now.hour);
-    final timeStr = _formatTime(now);
-    final dateStr = _formatDate(now);
+    final timeStr = DateFormat('hh:mm a').format(now);
+    final dateStr = DateFormat('EEEE, MMM d').format(now);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
 
     return Column(
@@ -78,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
             Text(
               isNight ? "Wind down and reflect" : "Let's make today productive",
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: textColor.withOpacity(0.7),
+                color: textColor.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -99,7 +103,7 @@ class HomeScreen extends ConsumerWidget {
               Text(
                 dateStr,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: textColor.withOpacity(0.7),
+                  color: textColor.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -140,7 +144,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDailyStreakCard(BuildContext context, bool isNight) {
+  Widget _buildDailyStreakCard(BuildContext context, WidgetRef ref, bool isNight) {
+    final streakAsync = ref.watch(streakNotifierProvider);
+    final streak = streakAsync.value ?? 0;
+
     return PremiumCard(
       isGlass: isNight,
       child: Row(
@@ -151,7 +158,7 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.local_fire_department_rounded,
                       color: Colors.orange,
                       size: 20,
@@ -169,7 +176,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '12 Days',
+                  '$streak Days',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 28,
@@ -181,19 +188,23 @@ class HomeScreen extends ConsumerWidget {
                   'Keep it up!',
                   style: TextStyle(
                     fontSize: 14,
-                    color: (isNight ? Colors.white : HelioColors.dayText).withOpacity(0.6),
+                    color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
                   ),
                 ),
               ],
             ),
           ),
-          _StreakProgressRing(isNight: isNight),
+          _StreakProgressRing(isNight: isNight, streak: streak),
         ],
       ),
     );
   }
 
-  Widget _buildTodaysGoalCard(BuildContext context, bool isNight) {
+  Widget _buildTodaysGoalCard(BuildContext context, WidgetRef ref, bool isNight) {
+    // Task 4: Real goal tracking
+    final wakeupCountAsync = ref.watch(totalWakeupsProvider);
+    final count = wakeupCountAsync.value ?? 0;
+    
     return PremiumCard(
       isGlass: isNight,
       child: Column(
@@ -201,14 +212,14 @@ class HomeScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.track_changes_rounded,
                 color: Colors.redAccent,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                'Today\'s Goal',
+                'Activity Goal',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -219,7 +230,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Complete 3 missions',
+            'Total Wakeups: $count',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 18,
@@ -233,9 +244,9 @@ class HomeScreen extends ConsumerWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: LinearProgressIndicator(
-                    value: 0.66,
+                    value: (count % 10) / 10.0,
                     minHeight: 8,
-                    backgroundColor: (isNight ? Colors.white : HelioColors.dayPrimary).withOpacity(0.1),
+                    backgroundColor: (isNight ? Colors.white : HelioColors.dayPrimary).withValues(alpha: 0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       isNight ? HelioColors.nightSecondary : HelioColors.daySecondary,
                     ),
@@ -244,11 +255,11 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '2 / 3',
+                '${count % 10} / 10',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
-                  color: (isNight ? Colors.white : HelioColors.dayText).withOpacity(0.6),
+                  color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -258,7 +269,18 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMoodCard(BuildContext context, bool isNight) {
+  Widget _buildMoodCard(BuildContext context, WidgetRef ref, bool isNight) {
+    final moodAsync = ref.watch(moodNotifierProvider);
+    final moodEntry = moodAsync.value;
+    
+    final emojiMap = {
+      'Great': '🤩',
+      'Good': '😊',
+      'Neutral': '😐',
+      'Low': '🥱',
+      'Exhausted': '😫',
+    };
+
     return PremiumCard(
       isGlass: isNight,
       child: Row(
@@ -270,8 +292,8 @@ class HomeScreen extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      '😊',
-                      style: TextStyle(fontSize: 18),
+                      moodEntry != null ? emojiMap[moodEntry.mood] ?? '😊' : '?',
+                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -286,7 +308,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  isNight ? 'Calm' : 'Good',
+                  moodEntry?.mood ?? 'Not Set',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 28,
@@ -295,10 +317,10 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isNight ? 'Great job today!' : 'You\'re doing great!',
+                  moodEntry != null ? 'Feeling ${moodEntry.mood.toLowerCase()}!' : 'How are you feeling?',
                   style: TextStyle(
                     fontSize: 14,
-                    color: (isNight ? Colors.white : HelioColors.dayText).withOpacity(0.6),
+                    color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -308,12 +330,12 @@ class HomeScreen extends ConsumerWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: (isNight ? HelioColors.nightPrimary : Colors.green).withOpacity(0.2),
+              color: (isNight ? HelioColors.nightPrimary : Colors.green).withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Icon(
-                isNight ? Icons.sentiment_satisfied_rounded : Icons.sentiment_very_satisfied_rounded,
+                moodEntry != null ? Icons.sentiment_satisfied_rounded : Icons.add_reaction_rounded,
                 color: isNight ? HelioColors.nightPrimary : Colors.green,
                 size: 40,
               ),
@@ -325,13 +347,17 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildNextAlarmSection(BuildContext context, WidgetRef ref, bool isNight) {
-    final alarmsAsync = ref.watch(alarmNotifierProvider);
-    return alarmsAsync.when(
-      data: (alarms) {
-        final activeAlarms = alarms.where((a) => a.isEnabled).toList();
-        if (activeAlarms.isEmpty) return const SizedBox.shrink();
-        final alarm = activeAlarms.first;
-        final timeStr = "${alarm.time.hour.toString().padLeft(2, '0')}:${alarm.time.minute.toString().padLeft(2, '0')}";
+    final nextAlarmAsync = ref.watch(nextUpcomingAlarmProvider);
+    
+    return nextAlarmAsync.when(
+      data: (alarm) {
+        if (alarm == null) return const SizedBox.shrink();
+        
+        final h = alarm.alarmTime.hour;
+        final m = alarm.alarmTime.minute;
+        final hour12 = h % 12 == 0 ? 12 : h % 12;
+        final period = h >= 12 ? 'PM' : 'AM';
+        final timeStr = '${hour12.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} $period';
 
         return PremiumCard(
           isGlass: isNight,
@@ -340,7 +366,7 @@ class HomeScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (isNight ? HelioColors.nightPrimary : Colors.orange).withOpacity(0.1),
+                  color: (isNight ? HelioColors.nightPrimary : Colors.orange).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
@@ -359,7 +385,7 @@ class HomeScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: (isNight ? Colors.white : HelioColors.dayText).withOpacity(0.6),
+                        color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -372,10 +398,10 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      'Evening Focus',
+                      alarm.label,
                       style: TextStyle(
                         fontSize: 14,
-                        color: (isNight ? Colors.white : HelioColors.dayText).withOpacity(0.6),
+                        color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -384,7 +410,7 @@ class HomeScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: (isNight ? HelioColors.nightPrimary : Colors.green).withOpacity(0.1),
+                  color: (isNight ? HelioColors.nightPrimary : Colors.green).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -406,23 +432,9 @@ class HomeScreen extends ConsumerWidget {
   }
 
   String _getGreeting(int hour) {
-    if (hour >= 5 && hour < 12) return 'Good Morning, Suhani! ☀️';
-    if (hour >= 12 && hour < 17) return 'Good Afternoon, Suhani! 🌤️';
-    return 'Good Evening, Suhani! 🌙';
-  }
-
-  String _formatTime(DateTime now) {
-    int hour = now.hour % 12;
-    if (hour == 0) hour = 12;
-    final minute = now.minute.toString().padLeft(2, '0');
-    final ampm = now.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $ampm';
-  }
-
-  String _formatDate(DateTime now) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return '${weekdays[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+    if (hour >= 5 && hour < 12) return 'Good Morning! ☀️';
+    if (hour >= 12 && hour < 17) return 'Good Afternoon! 🌤️';
+    return 'Good Evening! 🌙';
   }
 }
 
@@ -446,18 +458,13 @@ class _ActionButton extends StatelessWidget {
       icon: Icon(icon, size: 20),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isNight ? Colors.white.withOpacity(0.1) : Colors.white,
+        backgroundColor: isNight ? Colors.white.withValues(alpha: 0.1) : Colors.white,
         foregroundColor: isNight ? Colors.white : HelioColors.dayText,
         elevation: isNight ? 0 : 4,
         shadowColor: HelioColors.dayShadow,
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        side: isNight ? BorderSide(color: Colors.white.withOpacity(0.1)) : null,
-      ).copyWith(
-        backgroundColor: MaterialStateProperty.resolveWith((states) {
-          if (isNight) return Colors.white.withOpacity(0.1);
-          return Colors.white;
-        }),
+        side: isNight ? BorderSide(color: Colors.white.withValues(alpha: 0.1)) : null,
       ),
     );
   }
@@ -465,10 +472,13 @@ class _ActionButton extends StatelessWidget {
 
 class _StreakProgressRing extends StatelessWidget {
   final bool isNight;
-  const _StreakProgressRing({required this.isNight});
+  final int streak;
+  const _StreakProgressRing({required this.isNight, required this.streak});
 
   @override
   Widget build(BuildContext context) {
+    // Just a visual representation
+    final progress = (streak % 7) / 7.0;
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -476,15 +486,15 @@ class _StreakProgressRing extends StatelessWidget {
           width: 70,
           height: 70,
           child: CircularProgressIndicator(
-            value: 0.7,
+            value: (progress == 0 && streak > 0) ? 1.0 : progress,
             strokeWidth: 8,
-            backgroundColor: (isNight ? Colors.white : HelioColors.dayPrimary).withOpacity(0.1),
+            backgroundColor: (isNight ? Colors.white : HelioColors.dayPrimary).withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(
               isNight ? HelioColors.nightSecondary : HelioColors.daySecondary,
             ),
           ),
         ),
-        Icon(
+        const Icon(
           Icons.local_fire_department_rounded,
           color: Colors.orange,
           size: 32,

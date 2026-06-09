@@ -5,6 +5,8 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../providers/stats_provider.dart';
+import '../../providers/alarm_provider.dart';
 
 class InsightsDashboard extends ConsumerWidget {
   const InsightsDashboard({super.key});
@@ -14,6 +16,14 @@ class InsightsDashboard extends ConsumerWidget {
     final themeMode = ref.watch(themeControllerProvider);
     final isNight = _isNightMode(themeMode, DateTime.now().hour);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
+
+    final streakAsync = ref.watch(streakNotifierProvider);
+    final bestStreakAsync = ref.watch(bestStreakProvider);
+    final totalWakeupsAsync = ref.watch(totalWakeupsProvider);
+    final alarmsAsync = ref.watch(alarmNotifierProvider);
+    final missionStatsAsync = ref.watch(missionStatsProvider);
+    final consistencyAsync = ref.watch(wakeupConsistencyProvider);
+    final mostUsedAsync = ref.watch(mostUsedMissionProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -33,27 +43,40 @@ class InsightsDashboard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _buildCircadianScore(context, isNight, textColor),
+                _buildConsistencyScore(context, isNight, textColor, consistencyAsync),
                 const SizedBox(height: 32),
                 Text(
-                  'Sleep Consistency',
+                  'Mission Distribution',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildConsistencyChart(context, isNight, textColor),
+                missionStatsAsync.when(
+                  data: (stats) => _buildMissionStatsChart(context, isNight, textColor, stats),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Text('Error loading stats: $e'),
+                ),
                 const SizedBox(height: 32),
                 Text(
-                  'Recent Trends',
+                  'Summary',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildTrendList(context, isNight, textColor),
+                _buildQuickStats(
+                  context, 
+                  isNight, 
+                  textColor, 
+                  alarmsAsync, 
+                  totalWakeupsAsync,
+                  streakAsync,
+                  bestStreakAsync,
+                  mostUsedAsync,
+                ),
                 const SizedBox(height: 100),
               ],
             ),
@@ -69,8 +92,14 @@ class InsightsDashboard extends ConsumerWidget {
     return hour < 5 || hour >= 19;
   }
 
-  Widget _buildCircadianScore(BuildContext context, bool isNight, Color textColor) {
+  Widget _buildConsistencyScore(
+    BuildContext context, 
+    bool isNight, 
+    Color textColor,
+    AsyncValue<double> consistency,
+  ) {
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+    final score = consistency.value ?? 0.0;
     
     return PremiumCard(
       isGlass: isNight,
@@ -82,7 +111,7 @@ class InsightsDashboard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Circadian Sync',
+                  'Wake-up Score',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: primaryColor,
                     fontWeight: FontWeight.w800,
@@ -90,9 +119,9 @@ class InsightsDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your rhythm is 85% aligned with the sun.',
+                  'Your consistency is based on mission delay.',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.7),
+                    color: textColor.withValues(alpha: 0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -106,14 +135,14 @@ class InsightsDashboard extends ConsumerWidget {
                 height: 80,
                 width: 80,
                 child: CircularProgressIndicator(
-                  value: 0.85,
+                  value: score / 100.0,
                   strokeWidth: 10,
                   color: isNight ? HelioColors.nightSecondary : HelioColors.daySecondary,
-                  backgroundColor: textColor.withOpacity(0.1),
+                  backgroundColor: textColor.withValues(alpha: 0.1),
                 ),
               ),
               Text(
-                '85%',
+                '${score.toInt()}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: textColor,
                   fontWeight: FontWeight.w800,
@@ -126,80 +155,108 @@ class InsightsDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildConsistencyChart(BuildContext context, bool isNight, Color textColor) {
-    final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    final values = [0.8, 0.9, 0.7, 0.4, 0.9, 0.6, 0.8];
+  Widget _buildMissionStatsChart(BuildContext context, bool isNight, Color textColor, Map<String, int> stats) {
     final barColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
+    if (stats.isEmpty) {
+      return PremiumCard(
+        isGlass: isNight,
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Text(
+            'Complete missions to see stats',
+            style: TextStyle(color: textColor.withValues(alpha: 0.5)),
+          ),
+        ),
+      );
+    }
+
+    final sortedStats = stats.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final maxVal = sortedStats.first.value;
 
     return PremiumCard(
       isGlass: isNight,
       padding: const EdgeInsets.all(24),
       child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(7, (index) {
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    width: 24,
-                    height: 140 * values[index],
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [barColor, barColor.withOpacity(0.4)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        if (isNight)
-                          BoxShadow(
-                            color: barColor.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
+        children: sortedStats.map((entry) {
+          final progress = entry.value / maxVal;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      entry.key,
+                      style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 14),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    days[index],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textColor.withOpacity(0.5),
+                    Text(
+                      '${entry.value}',
+                      style: TextStyle(color: barColor, fontWeight: FontWeight.w800),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    color: barColor,
+                    backgroundColor: textColor.withValues(alpha: 0.05),
                   ),
-                ],
-              );
-            }),
-          ),
-        ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildTrendList(BuildContext context, bool isNight, Color textColor) {
+  Widget _buildQuickStats(
+    BuildContext context,
+    bool isNight,
+    Color textColor,
+    AsyncValue<List<dynamic>> alarms,
+    AsyncValue<int> totalWakeups,
+    AsyncValue<int> streak,
+    AsyncValue<int> bestStreak,
+    AsyncValue<String> mostUsed,
+  ) {
+    final totalAlarms = alarms.value?.length ?? 0;
+    final wakeups = totalWakeups.value ?? 0;
+
     final trends = [
-      {'title': 'Avg Wake-up', 'value': '6:45 AM', 'trend': '+12m', 'isGood': true},
-      {'title': 'Deep Sleep', 'value': '2h 15m', 'trend': '-5m', 'isGood': false},
-      {'title': 'Mood Score', 'value': '8.5/10', 'trend': '+0.5', 'isGood': true},
+      {'title': 'Total Alarms', 'value': '$totalAlarms', 'icon': Icons.alarm_rounded, 'color': Colors.blue},
+      {'title': 'Total Wakeups', 'value': '$wakeups', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orange},
+      {'title': 'Current Streak', 'value': '${streak.value ?? 0} d', 'icon': Icons.local_fire_department_rounded, 'color': Colors.red},
+      {'title': 'Best Streak', 'value': '${bestStreak.value ?? 0} d', 'icon': Icons.emoji_events_rounded, 'color': Colors.amber},
+      {'title': 'Top Mission', 'value': mostUsed.value ?? 'None', 'icon': Icons.bolt_rounded, 'color': Colors.purple},
     ];
 
     return Column(
       children: trends.map((trend) {
-        final isGood = trend['isGood'] as bool;
         return PremiumCard(
           isGlass: isNight,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Row(
             children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (trend['color'] as Color).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(trend['icon'] as IconData, color: trend['color'] as Color, size: 20),
+              ),
+              const SizedBox(width: 16),
               Text(
                 trend['title'] as String,
                 style: TextStyle(
-                  color: textColor.withOpacity(0.7),
+                  color: textColor.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -209,22 +266,7 @@ class InsightsDashboard extends ConsumerWidget {
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (isGood ? Colors.green : Colors.red).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  trend['trend'] as String,
-                  style: TextStyle(
-                    color: isGood ? Colors.green : Colors.red,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  fontSize: 18,
                 ),
               ),
             ],

@@ -5,9 +5,17 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../core/services/mission_service.dart';
 
 class WalkingChallengeScreen extends ConsumerStatefulWidget {
-  const WalkingChallengeScreen({super.key});
+  final bool isPreview;
+  final DateTime? scheduledTime;
+
+  const WalkingChallengeScreen({
+    super.key,
+    this.isPreview = false,
+    this.scheduledTime,
+  });
 
   @override
   ConsumerState<WalkingChallengeScreen> createState() => _WalkingChallengeScreenState();
@@ -26,12 +34,28 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
     });
   }
 
-  void _finish() {
+  void _finish() async {
+    if (!widget.isPreview) {
+      await ref.read(missionServiceProvider).completeMission(
+        missionType: 'Walking',
+        scheduledTime: widget.scheduledTime ?? DateTime.now(),
+      );
+    }
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Target reached! You are now fully awake.')),
+      SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Target reached! You are now fully awake.')),
     );
+    
     Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      if (mounted) {
+        if (widget.isPreview) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      }
     });
   }
 
@@ -47,6 +71,7 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SkyBackground(
+        showForeground: false,
         child: SafeArea(
           child: Column(
             children: [
@@ -64,7 +89,7 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
                 child: Text(
                   'Physical movement increases heart rate and cortisol levels, helping you wake up naturally.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 14, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ),
               const Spacer(),
@@ -99,10 +124,10 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
               // DEBUG BUTTON
               TextButton.icon(
                 onPressed: _onStep,
-                icon: Icon(Icons.touch_app_rounded, color: textColor.withOpacity(0.3)),
+                icon: Icon(Icons.touch_app_rounded, color: textColor.withValues(alpha: 0.3)),
                 label: Text(
                   'SIMULATE STEP',
-                  style: TextStyle(color: textColor.withOpacity(0.3), fontWeight: FontWeight.bold),
+                  style: TextStyle(color: textColor.withValues(alpha: 0.3), fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 40),
@@ -131,7 +156,7 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: primaryColor.withOpacity(0.15),
+                color: primaryColor.withValues(alpha: 0.15),
                 blurRadius: 40,
                 spreadRadius: 5,
               ),
@@ -145,7 +170,7 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
             value: progress,
             strokeWidth: 20,
             strokeCap: StrokeCap.round,
-            backgroundColor: textColor.withOpacity(0.05),
+            backgroundColor: textColor.withValues(alpha: 0.05),
             color: secondaryColor,
           ),
         ),
@@ -167,7 +192,7 @@ class _WalkingChallengeScreenState extends ConsumerState<WalkingChallengeScreen>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: textColor.withOpacity(0.4),
+                color: textColor.withValues(alpha: 0.4),
                 letterSpacing: 2,
               ),
             ),

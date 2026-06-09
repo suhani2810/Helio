@@ -6,9 +6,17 @@ import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../mood/mood_tracking_screen.dart';
+import '../../core/services/mission_service.dart';
 
 class ObjectDetectionMissionScreen extends ConsumerStatefulWidget {
-  const ObjectDetectionMissionScreen({super.key});
+  final bool isPreview;
+  final DateTime? scheduledTime;
+
+  const ObjectDetectionMissionScreen({
+    super.key,
+    this.isPreview = false,
+    this.scheduledTime,
+  });
 
   @override
   ConsumerState<ObjectDetectionMissionScreen> createState() => _ObjectDetectionMissionScreenState();
@@ -28,16 +36,30 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
     _completeMission();
   }
 
-  void _completeMission() {
+  void _completeMission() async {
+    if (!widget.isPreview) {
+      await ref.read(missionServiceProvider).completeMission(
+        missionType: 'Object Detection',
+        scheduledTime: widget.scheduledTime ?? DateTime.now(),
+      );
+    }
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Object "Mug" Detected! Mission Complete.')),
+      SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Object "Mug" Detected! Mission Complete.')),
     );
+    
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MoodTrackingScreen()),
-      );
+      if (widget.isPreview) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MoodTrackingScreen()),
+        );
+      }
     });
   }
 
@@ -51,6 +73,7 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SkyBackground(
+        showForeground: false,
         child: SafeArea(
           child: Stack(
             children: [
@@ -61,17 +84,17 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
                     Container(
                       padding: const EdgeInsets.all(40),
                       decoration: BoxDecoration(
-                        color: textColor.withOpacity(0.05),
+                        color: textColor.withValues(alpha: 0.05),
                         shape: BoxShape.circle,
-                        border: Border.all(color: textColor.withOpacity(0.1)),
+                        border: Border.all(color: textColor.withValues(alpha: 0.1)),
                       ),
-                      child: Icon(Icons.camera_enhance_rounded, size: 80, color: textColor.withOpacity(0.2)),
+                      child: Icon(Icons.camera_enhance_rounded, size: 80, color: textColor.withValues(alpha: 0.2)),
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'Scanner Ready',
                       style: TextStyle(
-                        color: textColor.withOpacity(0.4),
+                        color: textColor.withValues(alpha: 0.4),
                         fontWeight: FontWeight.w700,
                         letterSpacing: 2,
                       ),
@@ -89,7 +112,7 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
                       borderRadius: BorderRadius.circular(40),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.2),
+                          color: primaryColor.withValues(alpha: 0.2),
                           blurRadius: 20,
                           spreadRadius: 5,
                         ),
@@ -132,7 +155,7 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(Icons.search_rounded, color: primaryColor),
@@ -161,7 +184,7 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     elevation: 12,
-                    shadowColor: primaryColor.withOpacity(0.4),
+                    shadowColor: primaryColor.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                   ),
                   child: Text(

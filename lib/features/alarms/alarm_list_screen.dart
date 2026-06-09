@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
-import '../../models/alarm.dart';
+import '../../models/alarm_entity.dart';
 import '../../providers/alarm_provider.dart';
+import '../../providers/time_provider.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import 'create_alarm_screen.dart';
+import 'alarm_ringing_screen.dart';
 
 class AlarmListScreen extends ConsumerStatefulWidget {
   const AlarmListScreen({super.key});
@@ -40,7 +42,8 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
   Widget build(BuildContext context) {
     final alarmsAsync = ref.watch(alarmNotifierProvider);
     final themeMode = ref.watch(themeControllerProvider);
-    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final now = ref.watch(currentTimeProvider).value ?? DateTime.now();
+    final isNight = _isNightMode(themeMode, now.hour);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
 
     return Scaffold(
@@ -52,44 +55,63 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
             children: [
               if (isNight) const SizedBox(height: 260),
               // Header
-              Padding(
+                Padding(
                 padding: EdgeInsets.fromLTRB(24, isNight ? 0 : 20, 24, 0),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ALARMS',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
-                                  letterSpacing: 2,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          alarmsAsync.when(
-                            data: (alarms) => Text(
-                              '${alarms.where((a) => a.isEnabled).length} Active',
-                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                color: textColor,
-                                fontWeight: FontWeight.w800,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ALARMS',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
+                                      letterSpacing: 2,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
-                            ),
-                            loading: () => Text(
-                              '—',
-                              style: Theme.of(context).textTheme.displaySmall?.copyWith(color: textColor),
-                            ),
-                            error: (_, __) => const SizedBox.shrink(),
+                              const SizedBox(height: 4),
+                              alarmsAsync.when(
+                                data: (alarms) => Text(
+                                  '${alarms.where((a) => a.enabled).length} Active',
+                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                loading: () => Text(
+                                  '—',
+                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(color: textColor),
+                                ),
+                                error: (_, __) => const SizedBox.shrink(),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        _AddButton(
+                          onTap: () => _navigateToCreate(context),
+                          isNight: isNight,
+                        ),
+                      ],
                     ),
-                    _AddButton(
-                      onTap: () => _navigateToCreate(context),
-                      isNight: isNight,
+                    // Task 3: Developer Testing Trigger
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: TextButton.icon(
+                        onPressed: () => _triggerTestAlarm(ref),
+                        icon: const Icon(Icons.bug_report_rounded, size: 16),
+                        label: const Text('TRIGGER ALARM NOW (DEV)'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: isNight ? Colors.orange : Colors.deepOrange,
+                          textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -156,7 +178,28 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
     );
   }
 
-  Widget _buildList(BuildContext context, List<Alarm> alarms, bool isNight) {
+  // Task 3: Temporary Developer Testing Method
+  void _triggerTestAlarm(WidgetRef ref) async {
+    final alarmsAsync = ref.read(alarmNotifierProvider);
+    if (alarmsAsync.hasValue && alarmsAsync.value!.isNotEmpty) {
+      final alarm = alarmsAsync.value!.first;
+      // Trigger ringing screen manually for testing
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AlarmRingingScreen(alarm: alarm),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Create at least one alarm first')),
+      );
+    }
+  }
+
+  Widget _buildList(BuildContext context, List<AlarmEntity> alarms, bool isNight) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
       itemCount: alarms.length,
@@ -181,6 +224,7 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
       },
     );
   }
+
 
   Widget _buildEmptyState(BuildContext context, bool isNight, Color textColor) {
     return Center(
@@ -227,7 +271,7 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
 }
 
 class _AlarmCard extends StatelessWidget {
-  final Alarm alarm;
+  final AlarmEntity alarm;
   final bool isNight;
   final VoidCallback onTap;
   final VoidCallback onToggle;
@@ -243,8 +287,8 @@ class _AlarmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = alarm.time.hour;
-    final m = alarm.time.minute;
+    final h = alarm.alarmTime.hour;
+    final m = alarm.alarmTime.minute;
     final hour12 = h % 12 == 0 ? 12 : h % 12;
     final period = h >= 12 ? 'PM' : 'AM';
     final timeStr = '${hour12.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
@@ -279,7 +323,7 @@ class _AlarmCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      alarm.title,
+                      alarm.label,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -295,7 +339,7 @@ class _AlarmCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 40,
                             fontWeight: FontWeight.w800,
-                            color: alarm.isEnabled ? textColor : textColor.withOpacity(0.3),
+                            color: alarm.enabled ? textColor : textColor.withOpacity(0.3),
                             letterSpacing: -1,
                           ),
                         ),
@@ -306,7 +350,7 @@ class _AlarmCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: alarm.isEnabled ? textColor.withOpacity(0.7) : textColor.withOpacity(0.2),
+                              color: alarm.enabled ? textColor.withOpacity(0.7) : textColor.withOpacity(0.2),
                             ),
                           ),
                         ),
@@ -327,7 +371,7 @@ class _AlarmCard extends StatelessWidget {
                 ),
               ),
               Switch(
-                value: alarm.isEnabled,
+                value: alarm.enabled,
                 activeColor: isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary,
                 onChanged: (_) {
                   HapticFeedback.lightImpact();
@@ -341,6 +385,7 @@ class _AlarmCard extends StatelessWidget {
     );
   }
 }
+
 
 class _DayChips extends StatelessWidget {
   final List<int> days;

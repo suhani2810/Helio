@@ -175,22 +175,22 @@ class _MissionPreviewScreenState extends ConsumerState<MissionPreviewScreen> {
     Widget missionScreen;
     switch (missionName) {
       case 'Math':
-        missionScreen = const MathChallengeScreen();
+        missionScreen = const MathChallengeScreen(isPreview: true);
         break;
       case 'Typing':
-        missionScreen = const TypingChallengeScreen();
+        missionScreen = const TypingChallengeScreen(isPreview: true);
         break;
       case 'Shake':
-        missionScreen = const ShakeChallengeScreen();
+        missionScreen = const ShakeChallengeScreen(isPreview: true);
         break;
       case 'Walking':
-        missionScreen = const WalkingChallengeScreen();
+        missionScreen = const WalkingChallengeScreen(isPreview: true);
         break;
       case 'Tile Puzzle':
-        missionScreen = const TilePuzzleScreen();
+        missionScreen = const TilePuzzleScreen(isPreview: true);
         break;
       case 'Object Detection':
-        missionScreen = const ObjectDetectionMissionScreen();
+        missionScreen = const ObjectDetectionMissionScreen(isPreview: true);
         break;
       default:
         return;

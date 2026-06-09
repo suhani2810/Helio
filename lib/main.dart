@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alarm/alarm.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/theme/theme_mode_enum.dart';
 import 'navigation_wrapper.dart';
+import 'core/services/alarm_scheduler_service.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Task 1: Initialize Alarm Service
+  await AlarmSchedulerService.init();
+  
+  // Task 9: Initialize Notifications
+  final notificationService = NotificationService();
+  await notificationService.init();
+
   // Force translucent status bar
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

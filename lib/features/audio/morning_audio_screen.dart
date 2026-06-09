@@ -5,6 +5,8 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../providers/repository_providers.dart';
+import '../../models/morning_audio_entity.dart';
 
 class MorningAudioScreen extends ConsumerStatefulWidget {
   const MorningAudioScreen({super.key});
@@ -14,17 +16,46 @@ class MorningAudioScreen extends ConsumerStatefulWidget {
 }
 
 class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
-  String? _selectedAudio = 'Forest Birds';
-  double _volume = 0.5;
-  bool _fadeEnabled = true;
+  String? _selectedAudio;
+  bool _isEnabled = true;
+  bool _isLoading = true;
 
   final List<Map<String, dynamic>> _audioList = [
-    {'name': 'Forest Birds', 'icon': Icons.nature_people},
-    {'name': 'Soft Rain', 'icon': Icons.umbrella},
-    {'name': 'Ocean Waves', 'icon': Icons.waves},
-    {'name': 'Gentle Piano', 'icon': Icons.music_note},
-    {'name': 'Morning Zen', 'icon': Icons.self_improvement},
+    {'name': 'Forest Birds', 'icon': Icons.nature_people, 'path': 'assets/audio/morning_birds.mp3'},
+    {'name': 'Soft Rain', 'icon': Icons.umbrella, 'path': 'assets/audio/rain.mp3'},
+    {'name': 'Ocean Waves', 'icon': Icons.waves, 'path': 'assets/audio/waves.mp3'},
+    {'name': 'Gentle Piano', 'icon': Icons.music_note, 'path': 'assets/audio/piano.mp3'},
+    {'name': 'Morning Zen', 'icon': Icons.self_improvement, 'path': 'assets/audio/zen.mp3'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = await ref.read(morningAudioRepositoryProvider).getSettings();
+    setState(() {
+      _selectedAudio = settings.title;
+      _isEnabled = settings.isEnabled;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    final repo = ref.read(morningAudioRepositoryProvider);
+    final audio = _audioList.firstWhere((a) => a['name'] == _selectedAudio);
+    
+    final settings = MorningAudioEntity(
+      audioPath: audio['path'],
+      isEnabled: _isEnabled,
+      title: audio['name'],
+    );
+    
+    await repo.updateSettings(settings);
+    if (mounted) Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +63,10 @@ class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
     final isNight = _isNightMode(themeMode, DateTime.now().hour);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -65,6 +100,24 @@ class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      PremiumCard(
+                        isGlass: isNight,
+                        child: Row(
+                          children: [
+                            Text(
+                              'Enable Morning Audio',
+                              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            Switch(
+                              value: _isEnabled,
+                              onChanged: (val) => setState(() => _isEnabled = val),
+                              activeColor: primaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                       Text(
                         'Sunrise Soundscape',
                         style: TextStyle(
@@ -86,28 +139,16 @@ class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
                         },
                       ),
                       const SizedBox(height: 40),
-                      Text(
-                        'Audio Settings',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildVolumeSlider(isNight, textColor, primaryColor),
-                      _buildFadeSwitch(isNight, textColor, primaryColor),
-                      const SizedBox(height: 40),
                       SizedBox(
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: _saveSettings,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
                             elevation: 8,
-                            shadowColor: primaryColor.withOpacity(0.4),
+                            shadowColor: primaryColor.withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -141,93 +182,32 @@ class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
       child: PremiumCard(
         isGlass: isNight,
         padding: const EdgeInsets.all(16),
-        child: Container(
-          decoration: isSelected && !isNight
-              ? BoxDecoration(
-                  color: primaryColor.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(24),
-                )
-              : null,
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: (isSelected ? primaryColor : textColor).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  audio['icon'] as IconData,
-                  color: isSelected ? primaryColor : textColor.withOpacity(0.5),
-                ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: (isSelected ? primaryColor : textColor).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 16),
-              Text(
-                audio['name'] as String,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  fontSize: 16,
-                  color: isSelected ? primaryColor : textColor,
-                ),
+              child: Icon(
+                audio['icon'] as IconData,
+                color: isSelected ? primaryColor : textColor.withValues(alpha: 0.5),
               ),
-              const Spacer(),
-              if (isSelected)
-                Icon(Icons.check_circle_rounded, color: primaryColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVolumeSlider(bool isNight, Color textColor, Color primaryColor) {
-    return PremiumCard(
-      isGlass: isNight,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Volume',
-                style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              audio['name'] as String,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 16,
+                color: isSelected ? primaryColor : textColor,
               ),
-              Text(
-                '${(_volume * 100).toInt()}%',
-                style: TextStyle(color: primaryColor, fontWeight: FontWeight.w800),
-              )
-            ],
-          ),
-          Slider(
-            value: _volume,
-            onChanged: (val) => setState(() => _volume = val),
-            activeColor: primaryColor,
-            inactiveColor: primaryColor.withOpacity(0.2),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFadeSwitch(bool isNight, Color textColor, Color primaryColor) {
-    return PremiumCard(
-      isGlass: isNight,
-      padding: const EdgeInsets.all(8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        title: Text(
-          'Gradient Fade-in',
-          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          'Slowly increase volume over sunrise',
-          style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 12),
-        ),
-        trailing: Switch(
-          value: _fadeEnabled,
-          onChanged: (val) => setState(() => _fadeEnabled = val),
-          activeColor: primaryColor,
+            ),
+            const Spacer(),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: primaryColor),
+          ],
         ),
       ),
     );

@@ -6,9 +6,17 @@ import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../mood/mood_tracking_screen.dart';
+import '../../core/services/mission_service.dart';
 
 class MathChallengeScreen extends ConsumerStatefulWidget {
-  const MathChallengeScreen({super.key});
+  final bool isPreview;
+  final DateTime? scheduledTime;
+
+  const MathChallengeScreen({
+    super.key,
+    this.isPreview = false,
+    this.scheduledTime,
+  });
 
   @override
   ConsumerState<MathChallengeScreen> createState() => _MathChallengeScreenState();
@@ -34,15 +42,31 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
     }
   }
 
-  void _finish() {
+  void _finish() async {
+    if (!widget.isPreview) {
+      // Task 2: Real completion flow
+      await ref.read(missionServiceProvider).completeMission(
+        missionType: 'Math',
+        scheduledTime: widget.scheduledTime ?? DateTime.now(),
+      );
+    }
+
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Success! Good morning!')),
+      SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Success! Good morning!')),
     );
+
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MoodTrackingScreen()),
-        );
+        if (widget.isPreview) {
+          Navigator.of(context).pop();
+        } else {
+          // Task 2: Open Mood Screen after success
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MoodTrackingScreen()),
+          );
+        }
       }
     });
   }
@@ -57,6 +81,7 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SkyBackground(
+        showForeground: false,
         child: SafeArea(
           child: Column(
             children: [
@@ -84,12 +109,12 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
                 height: 90,
                 width: 220,
                 decoration: BoxDecoration(
-                  color: (isNight ? Colors.white : primaryColor).withOpacity(0.1),
+                  color: (isNight ? Colors.white : primaryColor).withValues(alpha: 0.1),
                   border: Border.all(color: primaryColor, width: 3),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.2),
+                      color: primaryColor.withValues(alpha: 0.2),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),

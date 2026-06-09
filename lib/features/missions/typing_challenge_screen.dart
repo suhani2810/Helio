@@ -5,9 +5,17 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
+import '../../core/services/mission_service.dart';
 
 class TypingChallengeScreen extends ConsumerStatefulWidget {
-  const TypingChallengeScreen({super.key});
+  final bool isPreview;
+  final DateTime? scheduledTime;
+
+  const TypingChallengeScreen({
+    super.key,
+    this.isPreview = false,
+    this.scheduledTime,
+  });
 
   @override
   ConsumerState<TypingChallengeScreen> createState() => _TypingChallengeScreenState();
@@ -27,12 +35,28 @@ class _TypingChallengeScreenState extends ConsumerState<TypingChallengeScreen> {
     });
   }
 
-  void _finish() {
+  void _finish() async {
+    if (!widget.isPreview) {
+      await ref.read(missionServiceProvider).completeMission(
+        missionType: 'Typing',
+        scheduledTime: widget.scheduledTime ?? DateTime.now(),
+      );
+    }
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Well typed! Wake up time!')),
+      SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Well typed! Wake up time!')),
     );
+    
     Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      if (mounted) {
+        if (widget.isPreview) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      }
     });
   }
 
@@ -46,6 +70,7 @@ class _TypingChallengeScreenState extends ConsumerState<TypingChallengeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SkyBackground(
+        showForeground: false,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -74,7 +99,7 @@ class _TypingChallengeScreenState extends ConsumerState<TypingChallengeScreen> {
                 Text(
                   'Type the following exactly:',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.6),
+                    color: textColor.withValues(alpha: 0.6),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -103,7 +128,7 @@ class _TypingChallengeScreenState extends ConsumerState<TypingChallengeScreen> {
                     style: TextStyle(fontSize: 18, color: textColor, fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
                       hintText: 'Start typing...',
-                      hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
+                      hintStyle: TextStyle(color: textColor.withValues(alpha: 0.3)),
                       border: InputBorder.none,
                     ),
                   ),

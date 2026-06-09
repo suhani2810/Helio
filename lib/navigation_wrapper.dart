@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:alarm/alarm.dart';
 import 'core/design_system/colors.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/theme/theme_mode_enum.dart';
@@ -9,6 +11,8 @@ import 'features/home/home_screen.dart';
 import 'features/alarms/alarm_list_screen.dart';
 import 'features/insights/insights_dashboard.dart';
 import 'features/settings/profile_screen.dart';
+import 'features/alarms/alarm_ringing_screen.dart';
+import 'providers/repository_providers.dart';
 
 class NavigationWrapper extends ConsumerStatefulWidget {
   const NavigationWrapper({super.key});
@@ -21,6 +25,7 @@ class _NavigationWrapperState extends ConsumerState<NavigationWrapper>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   late final List<AnimationController> _iconControllers;
+  StreamSubscription<AlarmSettings>? _subscription;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -40,10 +45,30 @@ class _NavigationWrapperState extends ConsumerState<NavigationWrapper>
       ),
     );
     _iconControllers[0].forward();
+
+    // Task 2: Listen for alarm ringing
+    _subscription = Alarm.ringStream.stream.listen((settings) {
+      _navigateToRinging(settings);
+    });
+  }
+
+  void _navigateToRinging(AlarmSettings settings) async {
+    final alarmRepo = ref.read(alarmRepositoryProvider);
+    final alarm = await alarmRepo.getAlarm(settings.id);
+    
+    if (mounted) {
+       Navigator.push(
+         context,
+         MaterialPageRoute(
+           builder: (_) => AlarmRingingScreen(alarm: alarm),
+         ),
+       );
+    }
   }
 
   @override
   void dispose() {
+    _subscription?.cancel();
     for (final controller in _iconControllers) {
       controller.dispose();
     }
@@ -64,6 +89,7 @@ class _NavigationWrapperState extends ConsumerState<NavigationWrapper>
     final isNight = _isNightMode(themeMode, DateTime.now().hour);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: _PremiumNavBar(
