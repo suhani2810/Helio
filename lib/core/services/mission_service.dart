@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:alarm/alarm.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/stats_provider.dart';
+import '../../providers/alarm_provider.dart';
 import '../../models/wakeup_entity.dart';
 
 class MissionService {
@@ -13,7 +14,15 @@ class MissionService {
     required DateTime scheduledTime,
   }) async {
     // 1. Stop the alarm
-    await Alarm.stopAll();
+    final alarms = await Alarm.getAlarms();
+    for (final a in alarms) {
+      if (await Alarm.isRinging(a.id)) {
+        await Alarm.stop(a.id);
+      }
+    }
+
+    // 2. Reschedule next instance
+    ref.invalidate(alarmNotifierProvider);
 
     // 2. Record Wakeup Analytics
     final now = DateTime.now();
