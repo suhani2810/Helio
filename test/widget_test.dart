@@ -21,6 +21,8 @@ import 'package:helio/models/alarm_entity.dart';
 import 'package:helio/models/mood_entry_entity.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:helio/features/alarms/alarm_list_screen.dart';
+import 'package:helio/widgets/theme/custom_moon.dart';
 
 void main() {
   setUpAll(() {
@@ -258,11 +260,11 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
-      // Mock values: Total wakeups = 15, Missed alarms = 3. Target = 18.
+      // Mock values: Total wakeups = 15, Missed alarms = 3. Target = 25.
       expect(find.text('Total Wakeups: 15'), findsOneWidget);
-      expect(find.text('15 / 18'), findsOneWidget);
+      expect(find.text('15 / 25'), findsOneWidget);
     });
   });
 
@@ -281,6 +283,66 @@ void main() {
       expect(paths[5], equals('assets/audio/Real clock.mp3'));
     });
   });
+
+  group('Alarms Screen Layout and Scroll Tests', () {
+    testWidgets('AlarmListScreen renders correctly and uses SingleChildScrollView', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            alarmRepositoryProvider.overrideWithValue(MockAlarmRepository()),
+            streakRepositoryProvider.overrideWithValue(MockStreakRepository()),
+            missionAnalyticsRepositoryProvider.overrideWithValue(MockMissionAnalyticsRepository()),
+            moodRepositoryProvider.overrideWithValue(MockMoodRepository()),
+            wakeupRepositoryProvider.overrideWithValue(MockWakeupRepository()),
+            alarmSchedulerServiceProvider.overrideWithValue(MockAlarmSchedulerService()),
+            themeControllerProvider.overrideWith((ref) => MockThemeController()),
+          ],
+          child: const MaterialApp(
+            home: AlarmListScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+
+      // Verify SingleChildScrollView is present
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      // Verify AlarmListScreen widget is present
+      expect(find.byType(AlarmListScreen), findsOneWidget);
+    });
+
+    testWidgets('AlarmListScreen renders CustomAnimatedMoon in Night Mode', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            alarmRepositoryProvider.overrideWithValue(MockAlarmRepository()),
+            streakRepositoryProvider.overrideWithValue(MockStreakRepository()),
+            missionAnalyticsRepositoryProvider.overrideWithValue(MockMissionAnalyticsRepository()),
+            moodRepositoryProvider.overrideWithValue(MockMoodRepository()),
+            wakeupRepositoryProvider.overrideWithValue(MockWakeupRepository()),
+            alarmSchedulerServiceProvider.overrideWithValue(MockAlarmSchedulerService()),
+            themeControllerProvider.overrideWith((ref) => MockNightThemeController()),
+          ],
+          child: const MaterialApp(
+            home: AlarmListScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 1));
+
+      // Verify CustomAnimatedMoon is rendered inline in Night Mode
+      expect(find.byType(CustomAnimatedMoon), findsOneWidget);
+    });
+  });
+}
+
+class MockNightThemeController extends StateNotifier<AppThemeMode> implements ThemeController {
+  MockNightThemeController() : super(AppThemeMode.night);
+  @override
+  Future<void> setMode(AppThemeMode mode) async {}
+  @override
+  bool isDarkModeForHour([DateTime? now]) => true;
 }
 
 class MockAlarmRepository extends Fake implements AlarmRepository {
@@ -307,6 +369,14 @@ class MockMissionAnalyticsRepository extends Fake implements MissionAnalyticsRep
 class MockMoodRepository extends Fake implements MoodRepository {
   @override
   Future<List<MoodEntryEntity>> getMoodHistory() async => [];
+  @override
+  Future<MoodEntryEntity?> getTodayMood() async => null;
+  @override
+  Future<List<double>> getLast7DaysMoodTrend() async => [];
+  @override
+  Future<String> getMostCommonMood() async => 'Happy';
+  @override
+  Future<void> saveMood(MoodEntryEntity entry) async {}
 }
 
 class MockWakeupRepository extends Fake implements WakeupRepository {

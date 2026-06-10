@@ -6,6 +6,7 @@ import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../../models/mission_model.dart';
+import '../../models/alarm_entity.dart';
 import 'math_challenge_screen.dart';
 import 'typing_challenge_screen.dart';
 import 'shake_challenge_screen.dart';
@@ -133,37 +134,20 @@ class _MissionPreviewScreenState extends ConsumerState<MissionPreviewScreen> {
           const SizedBox(height: 16),
           _buildBenefitsList(mission.benefits, textColor),
           const SizedBox(height: 48),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _launchMission(context, mission.name),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: primaryColor,
-                    side: BorderSide(color: primaryColor, width: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  child: const Text('TRY NOW', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1)),
-                ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _launchMission(context, mission.name),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                elevation: 8,
+                shadowColor: primaryColor.withOpacity(0.4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, mission.name),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    elevation: 8,
-                    shadowColor: primaryColor.withOpacity(0.4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  child: const Text('USE MISSION', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1)),
-                ),
-              ),
-            ],
+              child: const Text('TRY NOW', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 1)),
+            ),
           ),
           const SizedBox(height: 40),
         ],
@@ -171,7 +155,12 @@ class _MissionPreviewScreenState extends ConsumerState<MissionPreviewScreen> {
     );
   }
 
-  void _launchMission(BuildContext context, String missionName) {
+  void _launchMission(BuildContext context, String missionName) async {
+    final themeMode = ref.read(themeControllerProvider);
+    final isNight = _isNightMode(themeMode, DateTime.now().hour);
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+    final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
+
     Widget missionScreen;
     switch (missionName) {
       case 'Math':
@@ -195,15 +184,96 @@ class _MissionPreviewScreenState extends ConsumerState<MissionPreviewScreen> {
         missionScreen = const TilePuzzleScreen(isPreview: true);
         break;
       case 'Object Detection':
-        missionScreen = const ObjectDetectionMissionScreen(isPreview: true);
+        final selectedObject = await _showObjectSelector(context, isNight, textColor, primaryColor);
+        if (selectedObject == null) return;
+        missionScreen = ObjectDetectionMissionScreen(
+          isPreview: true,
+          alarm: AlarmEntity(
+            alarmTime: DateTime.now(),
+            createdAt: DateTime.now(),
+            targetObject: selectedObject,
+          ),
+        );
         break;
       default:
         return;
     }
 
+    if (!context.mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => missionScreen),
+    );
+  }
+
+  Future<String?> _showObjectSelector(BuildContext context, bool isNight, Color textColor, Color primaryColor) {
+    const objects = [
+      'Toothbrush',
+      'Cup',
+      'Book',
+      'Laptop',
+      'Keyboard',
+      'Phone',
+      'Chair',
+      'Backpack',
+      'Key',
+    ];
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isNight ? HelioColors.nightCard : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Test Object Detection',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Select an object to find for this test:',
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: objects.length,
+                  itemBuilder: (context, index) {
+                    final label = objects[index];
+                    return ListTile(
+                      onTap: () => Navigator.pop(context, label),
+                      leading: Icon(Icons.search_rounded, color: primaryColor),
+                      title: Text(
+                        label,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      trailing: Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.3)),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

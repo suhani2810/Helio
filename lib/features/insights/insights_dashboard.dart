@@ -181,10 +181,15 @@ class InsightsDashboard extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      entry.key,
-                      style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 14),
+                    Expanded(
+                      child: Text(
+                        entry.key,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       '${entry.value}',
                       style: TextStyle(color: barColor, fontWeight: FontWeight.w800),
@@ -259,20 +264,25 @@ class InsightsDashboard extends ConsumerWidget {
                 child: Icon(trend['icon'] as IconData, color: trend['color'] as Color, size: 20),
               ),
               const SizedBox(width: 16),
-              Text(
-                trend['title'] as String,
-                style: TextStyle(
-                  color: textColor.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  trend['title'] as String,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: textColor.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 trend['value'] as String,
+                maxLines: 1,
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.w800,
-                  fontSize: 18,
+                  fontSize: 16,
                 ),
               ),
             ],

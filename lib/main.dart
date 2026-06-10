@@ -43,7 +43,6 @@ class HelioApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeControllerProvider);
     
-    // Determine the actual theme mode to use for MaterialApp
     ThemeMode materialThemeMode;
     switch (mode) {
       case AppThemeMode.day:
@@ -53,7 +52,9 @@ class HelioApp extends ConsumerWidget {
         materialThemeMode = ThemeMode.dark;
         break;
       case AppThemeMode.auto:
-        materialThemeMode = ThemeMode.system;
+        final hour = DateTime.now().hour;
+        final isNight = hour < 5 || hour >= 19;
+        materialThemeMode = isNight ? ThemeMode.dark : ThemeMode.light;
         break;
     }
 

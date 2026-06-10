@@ -57,38 +57,9 @@ class ProfileScreen extends ConsumerWidget {
 
   Widget _buildProfileHeader(BuildContext context, bool isNight, Color textColor, Map<String, dynamic> rank) {
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
-    final secondaryColor = isNight ? HelioColors.nightSecondary : HelioColors.daySecondary;
 
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.bottomRight,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: primaryColor,
-                  width: 3,
-                ),
-              ),
-              child: const CircleAvatar(
-                radius: 50,
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=suhani'),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: secondaryColor,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.edit, size: 16, color: Colors.white),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
         Text(
           'Suhani Mahajan',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -121,13 +92,18 @@ class ProfileScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Next Rank',
-                    style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.w700),
+                  Expanded(
+                    child: Text(
+                      'Next Rank',
+                      style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
                   ),
-                  Text(
-                    '${rank['wakeups']} / ${rank['nextGoal']} wakeups',
-                    style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w800),
+                  Flexible(
+                    child: Text(
+                      '${rank['wakeups']} / ${rank['nextGoal']} wakeups',
+                      style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w800),
+                      textAlign: TextAlign.end,
+                    ),
                   ),
                 ],
               ),

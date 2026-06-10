@@ -40,23 +40,85 @@ class _AnimatedMoonState extends State<AnimatedMoon>
         height: widget.size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.95),
+          color: Colors.white.withValues(alpha: 0.95),
           boxShadow: [
-            BoxShadow(color: Colors.white.withOpacity(0.06), blurRadius: 20),
+            BoxShadow(color: Colors.white.withValues(alpha: 0.1), blurRadius: 20),
           ],
         ),
-        child: Align(
-          alignment: Alignment(-0.3, -0.3),
-          child: Container(
-            width: widget.size * 0.6,
-            height: widget.size * 0.6,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.02),
-              shape: BoxShape.circle,
+        child: Stack(
+          children: [
+            Align(
+              alignment: const Alignment(-0.3, -0.3),
+              child: Container(
+                width: widget.size * 0.6,
+                height: widget.size * 0.6,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
-          ),
+            CustomPaint(
+              size: Size(widget.size, widget.size),
+              painter: _MoonFacePainter(),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _MoonFacePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Eyes
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: center.translate(-radius * 0.25, -radius * 0.1),
+        width: radius * 0.3,
+        height: radius * 0.15,
+      ),
+      3.14,
+      3.14,
+      false,
+      paint,
+    );
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: center.translate(radius * 0.25, -radius * 0.1),
+        width: radius * 0.3,
+        height: radius * 0.15,
+      ),
+      3.14,
+      3.14,
+      false,
+      paint,
+    );
+
+    // Smile
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: center.translate(0, radius * 0.2),
+        width: radius * 0.5,
+        height: radius * 0.3,
+      ),
+      0,
+      3.14,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -556,6 +556,92 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
     );
   }
 
+  void _showObjectSelector(BuildContext context, bool isNight, Color textColor, Color primaryColor) {
+    const objects = [
+      'Toothbrush',
+      'Cup',
+      'Book',
+      'Laptop',
+      'Keyboard',
+      'Phone',
+      'Chair',
+      'Backpack',
+      'Key',
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isNight ? HelioColors.nightCard : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select Target Object',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: objects.length,
+                      itemBuilder: (context, index) {
+                        final label = objects[index];
+                        final isSelected = _targetObject == label;
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _targetObject = label;
+                            });
+                            setModalState(() {});
+                            Navigator.pop(context);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                                  color: isSelected ? primaryColor : textColor.withOpacity(0.5),
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 16,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
   Widget _buildMissionConfig(bool isNight, Color textColor, Color primaryColor) {
     String configLabel = '';
     String configValue = '';
@@ -585,11 +671,7 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
       case 'Object Detection':
         configLabel = 'Target';
         configValue = _targetObject;
-        onTap = () => setState(() {
-          const objects = ['Mug', 'Bottle', 'Book', 'Key'];
-          int idx = objects.indexOf(_targetObject);
-          _targetObject = objects[(idx + 1) % objects.length];
-        });
+        onTap = () => _showObjectSelector(context, isNight, textColor, primaryColor);
         break;
     }
 

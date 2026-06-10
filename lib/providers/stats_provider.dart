@@ -209,6 +209,11 @@ Future<double> averageMoodScore(AverageMoodScoreRef ref) async {
     'Calm': 3,
     'Tired': 2,
     'Stressed': 1,
+    'Great': 5,
+    'Good': 4,
+    'Neutral': 3,
+    'Low': 2,
+    'Exhausted': 1,
   };
   
   final total = history.fold(0, (sum, entry) => sum + (moodValueMap[entry.mood] ?? 0));
@@ -226,6 +231,11 @@ Future<String> highestMood(HighestMoodRef ref) async {
     'Calm': 3,
     'Tired': 2,
     'Stressed': 1,
+    'Great': 5,
+    'Good': 4,
+    'Neutral': 3,
+    'Low': 2,
+    'Exhausted': 1,
   };
   
   var highest = -1;
@@ -252,6 +262,11 @@ Future<String> lowestMood(LowestMoodRef ref) async {
     'Calm': 3,
     'Tired': 2,
     'Stressed': 1,
+    'Great': 5,
+    'Good': 4,
+    'Neutral': 3,
+    'Low': 2,
+    'Exhausted': 1,
   };
   
   var lowest = 6;
@@ -405,12 +420,23 @@ Future<String> moodStatus(MoodStatusRef ref) async {
   if (latest == null) return 'Not Set';
   
   switch (latest.mood) {
-    case 'Happy': return 'Positive';
-    case 'Calm': return 'Balanced';
-    case 'Tired': return 'Low Energy';
-    case 'Stressed': return 'Low';
-    case 'Energized': return 'High Energy';
-    default: return 'Stable';
+    case 'Happy':
+    case 'Great':
+    case 'Good':
+      return 'Positive';
+    case 'Calm':
+    case 'Neutral':
+      return 'Balanced';
+    case 'Tired':
+    case 'Exhausted':
+    case 'Low':
+      return 'Low Energy';
+    case 'Stressed':
+      return 'Low';
+    case 'Energized':
+      return 'High Energy';
+    default:
+      return 'Stable';
   }
 }
 

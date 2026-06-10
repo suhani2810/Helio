@@ -159,7 +159,7 @@ class ThemePreviewScreen extends ConsumerWidget {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => ref.read(themeControllerProvider.notifier).setMode(targetMode),
-      backgroundColor: Colors.transparent,
+      backgroundColor: (isNight ? Colors.white : Colors.black).withValues(alpha: 0.05),
       selectedColor: primaryColor.withOpacity(0.2),
       labelStyle: TextStyle(
         color: isSelected ? primaryColor : textColor.withOpacity(0.6),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/design_system/colors.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
@@ -146,7 +147,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
 
   Widget _buildMoodSelector(bool isNight, Color textColor) {
     return SizedBox(
-      height: 130,
+      height: 140,
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
         scrollDirection: Axis.horizontal,
@@ -160,6 +161,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
           return GestureDetector(
             onTap: () => setState(() => _selectedMood = mood['label'] as String),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -222,23 +224,26 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.5,
       ),
       itemCount: analytics.length,
       itemBuilder: (context, index) {
         final item = analytics[index];
         return PremiumCard(
           isGlass: isNight,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(item['icon'] as IconData, color: item['color'] as Color, size: 20),
-              const SizedBox(height: 8),
-              Text(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(item['icon'] as IconData, color: item['color'] as Color, size: 18),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
                 item['value'] as String,
                 style: TextStyle(
                   fontSize: 16,
@@ -246,16 +251,21 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                   color: textColor,
                 ),
               ),
-              Text(
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
                 item['label'] as String,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: textColor.withValues(alpha: 0.6),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         );
       },
     );
@@ -356,7 +366,19 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     }
     return Column(
       children: history.map((item) {
-        final dateStr = item.date.day == DateTime.now().day ? 'Today' : '${item.date.day}/${item.date.month}';
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final entryDate = DateTime(item.date.year, item.date.month, item.date.day);
+        
+        String dateStr;
+        if (entryDate == today) {
+          dateStr = 'Today';
+        } else if (entryDate == today.subtract(const Duration(days: 1))) {
+          dateStr = 'Yesterday';
+        } else {
+          dateStr = DateFormat('MMMM d').format(item.date);
+        }
+
         return PremiumCard(
           isGlass: isNight,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -376,17 +398,21 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
               ),
               const Spacer(),
               Container(
+                constraints: const BoxConstraints(maxWidth: 100),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  item.mood,
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    item.mood,
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),

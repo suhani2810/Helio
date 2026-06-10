@@ -115,23 +115,50 @@ class MoonPainter extends CustomPainter {
 
     // 4. DRAW SMILEY FACE
     final facePaint = Paint()
-      ..color = const Color(0xFF071330).withOpacity(0.5)
+      ..color = const Color(0xFF071330).withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
-    // Eyes
-    canvas.drawCircle(center.translate(-radius * 0.2, -radius * 0.1), 3, Paint()..color = facePaint.color);
-    canvas.drawCircle(center.translate(radius * 0.2, -radius * 0.1), 3, Paint()..color = facePaint.color);
+    // Shift face to the left to sit on the crescent body
+    final faceCenter = center.translate(-radius * 0.35, 0);
+
+    // Eyes (simple arcs like the sun)
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: faceCenter.translate(-radius * 0.15, -radius * 0.1),
+        width: radius * 0.2,
+        height: radius * 0.1,
+      ),
+      3.14,
+      3.14,
+      false,
+      facePaint,
+    );
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: faceCenter.translate(radius * 0.15, -radius * 0.1),
+        width: radius * 0.2,
+        height: radius * 0.1,
+      ),
+      3.14,
+      3.14,
+      false,
+      facePaint,
+    );
 
     // Smile
-    final smilePath = Path()
-      ..addArc(
-        Rect.fromCenter(center: center.translate(0, radius * 0.1), width: radius * 0.4, height: radius * 0.3),
-        0.2,
-        pi - 0.4,
-      );
-    canvas.drawPath(smilePath, facePaint);
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: faceCenter.translate(0, radius * 0.15),
+        width: radius * 0.4,
+        height: radius * 0.2,
+      ),
+      0,
+      3.14,
+      false,
+      facePaint,
+    );
 
     // 5. Subtle Inner Rim Highlight
     final rimPaint = Paint()

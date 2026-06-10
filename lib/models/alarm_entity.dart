@@ -43,7 +43,7 @@ class AlarmEntity {
     this.shakeLimit = 20,
     this.stepGoal = 30,
     this.walkingDifficulty = 1,
-    this.targetObject = 'Mug',
+    this.targetObject = 'Toothbrush',
     this.puzzleSize = 3,
     this.puzzleDifficulty = 1,
   });

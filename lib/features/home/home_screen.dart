@@ -296,9 +296,28 @@ class HomeScreen extends ConsumerWidget {
       'Calm': '😌',
       'Tired': '🥱',
       'Stressed': '😫',
+      'Great': '🤩',
+      'Good': '😊',
+      'Neutral': '😐',
+      'Low': '🥱',
+      'Exhausted': '😫',
+    };
+
+    final colorMap = {
+      'Energized': Colors.orange,
+      'Happy': Colors.yellow,
+      'Calm': Colors.blue,
+      'Tired': Colors.purple,
+      'Stressed': Colors.red,
+      'Great': Colors.orange,
+      'Good': Colors.yellow,
+      'Neutral': Colors.blue,
+      'Low': Colors.purple,
+      'Exhausted': Colors.red,
     };
 
     final status = statusAsync.value ?? 'Not Set';
+    final moodColor = moodEntry != null ? colorMap[moodEntry.mood] ?? Colors.green : Colors.green;
 
     return PremiumCard(
       isGlass: isNight,
@@ -349,14 +368,13 @@ class HomeScreen extends ConsumerWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: (isNight ? HelioColors.nightPrimary : Colors.green).withValues(alpha: 0.2),
+              color: (isNight ? HelioColors.nightPrimary : moodColor).withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Icon(
-                moodEntry != null ? Icons.mood_rounded : Icons.add_reaction_rounded,
-                color: isNight ? HelioColors.nightPrimary : Colors.green,
-                size: 40,
+              child: Text(
+                moodEntry != null ? emojiMap[moodEntry.mood] ?? '😊' : '?',
+                style: const TextStyle(fontSize: 32),
               ),
             ),
           ),
