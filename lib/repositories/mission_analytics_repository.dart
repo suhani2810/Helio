@@ -1,6 +1,5 @@
 import 'package:isar/isar.dart';
 import '../models/mission_completion_entity.dart';
-import '../models/alarm_entity.dart';
 import 'alarm_repository.dart';
 
 class MissionAnalyticsRepository {

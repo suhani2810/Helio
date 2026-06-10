@@ -213,7 +213,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     final trendAsync = ref.watch(moodTrendLabelProvider);
 
     final analytics = [
-      {'label': 'Average Mood', 'value': avgAsync.when(data: (v) => v.toStringAsFixed(1), loading: () => '—', error: (_, __) => '—'), 'icon': Icons.analytics_rounded, 'color': Colors.blue},
+      {'label': 'Average Mood', 'value': avgAsync.when(data: (v) => v.toStringAsFixed(1), loading: () => '—', error: (_, _) => '—'), 'icon': Icons.analytics_rounded, 'color': Colors.blue},
       {'label': 'Highest Mood', 'value': highAsync.value ?? '—', 'icon': Icons.trending_up_rounded, 'color': Colors.green},
       {'label': 'Lowest Mood', 'value': lowAsync.value ?? '—', 'icon': Icons.trending_down_rounded, 'color': Colors.red},
       {'label': '7-Day Trend', 'value': trendAsync.value ?? 'Stable', 'icon': Icons.timeline_rounded, 'color': Colors.orange},
@@ -284,7 +284,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     return PremiumCard(
       isGlass: isNight,
       padding: const EdgeInsets.all(24),
-      child: Container(
+      child: SizedBox(
         height: 150,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -333,7 +333,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
         Expanded(
           child: _StatCard(
             label: 'Streak',
-            value: streakAsync.when(data: (s) => '$s Days', loading: () => '—', error: (_, __) => '—'),
+            value: streakAsync.when(data: (s) => '$s Days', loading: () => '—', error: (_, _) => '—'),
             icon: Icons.local_fire_department_rounded,
             color: Colors.orange,
             isNight: isNight,

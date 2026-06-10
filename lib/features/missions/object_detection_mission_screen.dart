@@ -6,7 +6,6 @@ import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import '../../core/design_system/colors.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/theme/theme_mode_enum.dart';
-import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../mood/mood_tracking_screen.dart';
 import '../../core/services/mission_service.dart';

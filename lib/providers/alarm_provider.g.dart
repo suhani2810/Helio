@@ -1,10 +1,5 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'alarm_provider.dart';
-
-// **************************************************************************
-// RiverpodGenerator
-// **************************************************************************
 
 String _$nextUpcomingAlarmHash() => r'bc43c1c5a2d6dae98a0ea6c60e6a5f049138c29c';
 
@@ -38,5 +33,3 @@ final alarmNotifierProvider =
 );
 
 typedef _$AlarmNotifier = AutoDisposeAsyncNotifier<List<AlarmEntity>>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

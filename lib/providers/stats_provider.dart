@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'repository_providers.dart';
 import '../models/mood_entry_entity.dart';
 import '../models/wakeup_entity.dart';
-import '../models/alarm_entity.dart';
 import 'alarm_provider.dart';
 
 part 'stats_provider.g.dart';

@@ -112,7 +112,7 @@ class _MorningAudioScreenState extends ConsumerState<MorningAudioScreen> {
                             Switch(
                               value: _isEnabled,
                               onChanged: (val) => setState(() => _isEnabled = val),
-                              activeColor: primaryColor,
+                              activeThumbColor: primaryColor,
                             ),
                           ],
                         ),

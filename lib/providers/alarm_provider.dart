@@ -112,7 +112,7 @@ Future<AlarmEntity?> nextUpcomingAlarm(NextUpcomingAlarmRef ref) async {
       return active.first;
     },
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
 }
 

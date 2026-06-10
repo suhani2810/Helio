@@ -6,7 +6,6 @@ import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../../providers/stats_provider.dart';
-import '../../providers/alarm_provider.dart';
 
 class InsightsDashboard extends ConsumerWidget {
   const InsightsDashboard({super.key});

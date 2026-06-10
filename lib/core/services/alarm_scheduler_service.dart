@@ -1,6 +1,4 @@
 import 'package:alarm/alarm.dart';
-import 'package:alarm/model/alarm_settings.dart';
-import 'package:alarm/model/notification_settings.dart';
 import '../../models/alarm_entity.dart';
 import 'notification_service.dart';
 
