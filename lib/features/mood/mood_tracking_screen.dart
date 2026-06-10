@@ -6,7 +6,6 @@ import '../../core/theme/theme_mode_enum.dart';
 import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../../providers/stats_provider.dart';
-import '../../providers/repository_providers.dart';
 import '../../models/mood_entry_entity.dart';
 
 class MoodTrackingScreen extends ConsumerStatefulWidget {
@@ -20,12 +19,24 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
   String? _selectedMood;
 
   final List<Map<String, dynamic>> _moods = [
-    {'label': 'Great', 'emoji': '🤩', 'color': Colors.orange},
-    {'label': 'Good', 'emoji': '😊', 'color': Colors.yellow},
-    {'label': 'Neutral', 'emoji': '😐', 'color': Colors.blue},
-    {'label': 'Low', 'emoji': '🥱', 'color': Colors.purple},
-    {'label': 'Exhausted', 'emoji': '😫', 'color': Colors.red},
+    {'label': 'Energized', 'emoji': '🔥', 'color': Colors.orange},
+    {'label': 'Happy', 'emoji': '😊', 'color': Colors.yellow},
+    {'label': 'Calm', 'emoji': '😌', 'color': Colors.blue},
+    {'label': 'Tired', 'emoji': '🥱', 'color': Colors.purple},
+    {'label': 'Stressed', 'emoji': '😫', 'color': Colors.red},
   ];
+
+  String _getStatus(String? mood) {
+    if (mood == null) return 'Not Set';
+    switch (mood) {
+      case 'Happy': return 'Positive';
+      case 'Calm': return 'Balanced';
+      case 'Tired': return 'Low Energy';
+      case 'Stressed': return 'Low';
+      case 'Energized': return 'High Energy';
+      default: return 'Stable';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +45,9 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     final textColor = isNight ? Colors.white : HelioColors.dayText;
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
 
-    final moodHistoryAsync = ref.watch(_moodHistoryProvider);
+    final moodHistoryAsync = ref.watch(moodHistoryProvider);
+    final moodTrendAsync = ref.watch(moodTrendProvider);
+    final statusAsync = ref.watch(moodStatusProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -81,6 +94,18 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                 const SizedBox(height: 24),
                 _buildMoodSelector(isNight, textColor),
                 const SizedBox(height: 40),
+                _buildStatisticsRow(isNight, textColor, statusAsync),
+                const SizedBox(height: 40),
+                Text(
+                  'Mood Analytics',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildAnalyticsGrid(isNight, textColor),
+                const SizedBox(height: 40),
                 Text(
                   'Weekly Mood Chart',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -89,9 +114,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildWeeklyChart(isNight, textColor, primaryColor),
-                const SizedBox(height: 40),
-                _buildStatisticsRow(isNight, textColor),
+                _buildWeeklyChart(isNight, textColor, primaryColor, moodTrendAsync),
                 const SizedBox(height: 40),
                 Text(
                   'Mood History',
@@ -143,17 +166,17 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isSelected 
-                        ? moodColor.withOpacity(0.2) 
-                        : (isNight ? Colors.white.withOpacity(0.05) : Colors.white),
+                        ? moodColor.withValues(alpha: 0.2) 
+                        : (isNight ? Colors.white.withValues(alpha: 0.05) : Colors.white),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? moodColor : textColor.withOpacity(0.1),
+                      color: isSelected ? moodColor : textColor.withValues(alpha: 0.1),
                       width: 2.5,
                     ),
                     boxShadow: [
                       if (isSelected)
                         BoxShadow(
-                          color: moodColor.withOpacity(0.3),
+                          color: moodColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -170,7 +193,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected ? textColor : textColor.withOpacity(0.5),
+                    color: isSelected ? textColor : textColor.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -181,7 +204,73 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     );
   }
 
-  Widget _buildWeeklyChart(bool isNight, Color textColor, Color primaryColor) {
+  Widget _buildAnalyticsGrid(bool isNight, Color textColor) {
+    final avgAsync = ref.watch(averageMoodScoreProvider);
+    final highAsync = ref.watch(highestMoodProvider);
+    final lowAsync = ref.watch(lowestMoodProvider);
+    final trendAsync = ref.watch(moodTrendLabelProvider);
+
+    final analytics = [
+      {'label': 'Average Mood', 'value': avgAsync.when(data: (v) => v.toStringAsFixed(1), loading: () => '—', error: (_, __) => '—'), 'icon': Icons.analytics_rounded, 'color': Colors.blue},
+      {'label': 'Highest Mood', 'value': highAsync.value ?? '—', 'icon': Icons.trending_up_rounded, 'color': Colors.green},
+      {'label': 'Lowest Mood', 'value': lowAsync.value ?? '—', 'icon': Icons.trending_down_rounded, 'color': Colors.red},
+      {'label': '7-Day Trend', 'value': trendAsync.value ?? 'Stable', 'icon': Icons.timeline_rounded, 'color': Colors.orange},
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.4,
+      ),
+      itemCount: analytics.length,
+      itemBuilder: (context, index) {
+        final item = analytics[index];
+        return PremiumCard(
+          isGlass: isNight,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(item['icon'] as IconData, color: item['color'] as Color, size: 20),
+              const SizedBox(height: 8),
+              Text(
+                item['value'] as String,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: textColor,
+                ),
+              ),
+              Text(
+                item['label'] as String,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: textColor.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWeeklyChart(bool isNight, Color textColor, Color primaryColor, AsyncValue<List<double>> trendAsync) {
+    final list = trendAsync.value ?? List.filled(7, 0.0);
+    final weekdays = <String>[];
+    final now = DateTime.now();
+    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    for (int i = 6; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      weekdays.add(dayLabels[date.weekday - 1]);
+    }
+
     return PremiumCard(
       isGlass: isNight,
       padding: const EdgeInsets.all(24),
@@ -191,16 +280,17 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: List.generate(7, (index) {
-            final heights = [0.4, 0.8, 0.6, 0.9, 0.7, 0.5, 0.8];
+            final val = index < list.length ? list[index] : 0.0;
+            final hVal = val == 0.0 ? 4.0 : 100.0 * val;
             return Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Container(
                   width: 14,
-                  height: 100 * heights[index],
+                  height: hVal,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [primaryColor, primaryColor.withOpacity(0.5)],
+                      colors: [primaryColor, primaryColor.withValues(alpha: 0.5)],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
@@ -209,11 +299,11 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  ['M', 'T', 'W', 'T', 'F', 'S', 'S'][index],
+                  weekdays[index],
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: textColor.withOpacity(0.5),
+                    color: textColor.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -224,8 +314,10 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     );
   }
 
-  Widget _buildStatisticsRow(bool isNight, Color textColor) {
+  Widget _buildStatisticsRow(bool isNight, Color textColor, AsyncValue<String> statusAsync) {
     final streakAsync = ref.watch(streakNotifierProvider);
+    final status = statusAsync.value ?? 'Not Set';
+
     return Row(
       children: [
         Expanded(
@@ -242,7 +334,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
         Expanded(
           child: _StatCard(
             label: 'Status',
-            value: 'Energized',
+            value: status,
             icon: Icons.mood_rounded,
             color: Colors.amber,
             isNight: isNight,
@@ -257,8 +349,8 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     if (history.isEmpty) {
       return Center(
         child: Text(
-          'No history yet',
-          style: TextStyle(color: textColor.withOpacity(0.5)),
+          'No mood history yet.',
+          style: TextStyle(color: textColor.withValues(alpha: 0.5)),
         ),
       );
     }
@@ -286,7 +378,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -306,9 +398,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
   }
 }
 
-final _moodHistoryProvider = FutureProvider<List<MoodEntryEntity>>((ref) {
-  return ref.watch(moodRepositoryProvider).getMoodHistory();
-});
+
 
 class _StatCard extends StatelessWidget {
   final String label;
@@ -336,19 +426,22 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: textColor,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: textColor,
+              ),
             ),
           ),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: textColor.withOpacity(0.5),
+              color: textColor.withValues(alpha: 0.5),
               fontWeight: FontWeight.w600,
             ),
           ),

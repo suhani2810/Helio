@@ -8,14 +8,18 @@ import '../../widgets/premium_card.dart';
 import '../mood/mood_tracking_screen.dart';
 import '../../core/services/mission_service.dart';
 
+import '../../models/alarm_entity.dart';
+
 class ObjectDetectionMissionScreen extends ConsumerStatefulWidget {
   final bool isPreview;
   final DateTime? scheduledTime;
+  final AlarmEntity? alarm;
 
   const ObjectDetectionMissionScreen({
     super.key,
     this.isPreview = false,
     this.scheduledTime,
+    this.alarm,
   });
 
   @override
@@ -41,13 +45,14 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
       await ref.read(missionServiceProvider).completeMission(
         missionType: 'Object Detection',
         scheduledTime: widget.scheduledTime ?? DateTime.now(),
+        alarm: widget.alarm,
       );
     }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Object "Mug" Detected! Mission Complete.')),
+      SnackBar(content: Text(widget.isPreview ? 'Preview Complete!' : 'Object "${widget.alarm?.targetObject ?? 'Mug'}" Detected! Mission Complete.')),
     );
     
     Future.delayed(const Duration(seconds: 1), () {
@@ -55,9 +60,9 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
       if (widget.isPreview) {
         Navigator.of(context).pop();
       } else {
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const MoodTrackingScreen()),
+          (route) => route.isFirst,
         );
       }
     });
@@ -162,7 +167,7 @@ class _ObjectDetectionMissionScreenState extends ConsumerState<ObjectDetectionMi
                       ),
                       const SizedBox(width: 16),
                       Text(
-                        'Detecting: Coffee Mug',
+                        'Detecting: ${widget.alarm?.targetObject ?? 'Mug'}',
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.w800,

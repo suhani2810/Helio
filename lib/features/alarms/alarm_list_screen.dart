@@ -180,23 +180,27 @@ class _AlarmListScreenState extends ConsumerState<AlarmListScreen>
 
   // Task 3: Temporary Developer Testing Method
   void _triggerTestAlarm(WidgetRef ref) async {
-    final alarmsAsync = ref.read(alarmNotifierProvider);
-    if (alarmsAsync.hasValue && alarmsAsync.value!.isNotEmpty) {
-      final alarm = alarmsAsync.value!.first;
-      // Trigger ringing screen manually for testing
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AlarmRingingScreen(alarm: alarm),
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Create at least one alarm first')),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Scheduling native test alarm for 2 seconds in the future...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    final testAlarm = AlarmEntity(
+      label: 'DEV-TEST: Quick Alarm',
+      alarmTime: DateTime.now().add(const Duration(seconds: 2)),
+      enabled: true,
+      repeatDays: const [],
+      ringtone: 'Default',
+      missionType: 'Math',
+      mathDifficulty: 0, // Easy
+      mathQuestionsCount: 1, // 1 question
+      createdAt: DateTime.now(),
+    );
+
+    await ref.read(alarmNotifierProvider.notifier).addAlarm(testAlarm);
   }
 
   Widget _buildList(BuildContext context, List<AlarmEntity> alarms, bool isNight) {

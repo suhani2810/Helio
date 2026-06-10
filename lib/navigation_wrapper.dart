@@ -12,6 +12,7 @@ import 'features/alarms/alarm_list_screen.dart';
 import 'features/insights/insights_dashboard.dart';
 import 'features/settings/profile_screen.dart';
 import 'features/alarms/alarm_ringing_screen.dart';
+import 'core/services/ringtone_service.dart';
 import 'providers/repository_providers.dart';
 
 class NavigationWrapper extends ConsumerStatefulWidget {
@@ -55,6 +56,23 @@ class _NavigationWrapperState extends ConsumerState<NavigationWrapper>
   void _navigateToRinging(AlarmSettings settings) async {
     final alarmRepo = ref.read(alarmRepositoryProvider);
     final alarm = await alarmRepo.getAlarm(settings.id);
+    
+    final scheduledTime = settings.dateTime;
+    final actualTriggerTime = DateTime.now();
+    final delayDifference = actualTriggerTime.difference(scheduledTime);
+    
+    print('=============================================');
+    print('[ALARM TRIGGER TELEMETRY]');
+    print('Scheduled Time: $scheduledTime');
+    print('Actual Trigger Time: $actualTriggerTime');
+    print('Delay Difference: ${delayDifference.inMilliseconds} ms (${delayDifference.inSeconds} s)');
+    print('=============================================');
+    
+    if (alarm != null) {
+      RingtoneService.playAlarm(alarm.ringtone);
+    } else {
+      RingtoneService.playAlarm('assets/audio/Classic.mp3');
+    }
     
     if (mounted) {
        Navigator.push(

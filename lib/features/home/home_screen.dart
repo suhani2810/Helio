@@ -10,6 +10,7 @@ import '../../providers/alarm_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/time_provider.dart';
+import '../../models/alarm_entity.dart';
 import '../missions/mission_preview_screen.dart';
 import '../mood/mood_tracking_screen.dart';
 
@@ -201,9 +202,12 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildTodaysGoalCard(BuildContext context, WidgetRef ref, bool isNight) {
-    // Task 4: Real goal tracking
     final wakeupCountAsync = ref.watch(totalWakeupsProvider);
+    final targetAsync = ref.watch(activityGoalTargetProvider);
+    
     final count = wakeupCountAsync.value ?? 0;
+    final target = targetAsync.value ?? 10;
+    final progress = count / target;
     
     return PremiumCard(
       isGlass: isNight,
@@ -238,28 +242,40 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: (count % 10) / 10.0,
-                    minHeight: 8,
-                    backgroundColor: (isNight ? Colors.white : HelioColors.dayPrimary).withValues(alpha: 0.1),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isNight ? HelioColors.nightSecondary : HelioColors.daySecondary,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Completion',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.5),
                     ),
                   ),
-                ),
+                  Text(
+                    '$count / $target',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: isNight ? HelioColors.nightSecondary : HelioColors.daySecondary,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Text(
-                '${count % 10} / 10',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: progress.clamp(0.0, 1.0),
+                  minHeight: 8,
+                  backgroundColor: (isNight ? Colors.white : HelioColors.dayPrimary).withValues(alpha: 0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isNight ? HelioColors.nightSecondary : HelioColors.daySecondary,
+                  ),
                 ),
               ),
             ],
@@ -271,15 +287,18 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildMoodCard(BuildContext context, WidgetRef ref, bool isNight) {
     final moodAsync = ref.watch(moodNotifierProvider);
+    final statusAsync = ref.watch(moodStatusProvider);
     final moodEntry = moodAsync.value;
     
     final emojiMap = {
-      'Great': '🤩',
-      'Good': '😊',
-      'Neutral': '😐',
-      'Low': '🥱',
-      'Exhausted': '😫',
+      'Energized': '🔥',
+      'Happy': '😊',
+      'Calm': '😌',
+      'Tired': '🥱',
+      'Stressed': '😫',
     };
+
+    final status = statusAsync.value ?? 'Not Set';
 
     return PremiumCard(
       isGlass: isNight,
@@ -317,7 +336,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  moodEntry != null ? 'Feeling ${moodEntry.mood.toLowerCase()}!' : 'How are you feeling?',
+                  moodEntry != null ? 'Status: $status' : 'How are you feeling?',
                   style: TextStyle(
                     fontSize: 14,
                     color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
@@ -335,7 +354,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             child: Center(
               child: Icon(
-                moodEntry != null ? Icons.sentiment_satisfied_rounded : Icons.add_reaction_rounded,
+                moodEntry != null ? Icons.mood_rounded : Icons.add_reaction_rounded,
                 color: isNight ? HelioColors.nightPrimary : Colors.green,
                 size: 40,
               ),
@@ -348,11 +367,69 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildNextAlarmSection(BuildContext context, WidgetRef ref, bool isNight) {
     final nextAlarmAsync = ref.watch(nextUpcomingAlarmProvider);
-    
+    final now = ref.watch(currentTimeProvider).value ?? DateTime.now();
+    final textColor = isNight ? Colors.white : HelioColors.dayText;
+
     return nextAlarmAsync.when(
       data: (alarm) {
-        if (alarm == null) return const SizedBox.shrink();
+        if (alarm == null) {
+          return PremiumCard(
+            isGlass: isNight,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (isNight ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    Icons.alarm_off_rounded,
+                    color: textColor.withValues(alpha: 0.4),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No Upcoming Alarms',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tap Alarms to set your wake-up call',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: textColor.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         
+        final nextOccur = _calculateNext(alarm, now);
+        final diff = nextOccur.difference(now);
+        String countdownStr = '';
+        if (diff.isNegative) {
+          countdownStr = 'Ringing...';
+        } else {
+          final hours = diff.inHours;
+          final mins = diff.inMinutes % 60;
+          final secs = diff.inSeconds % 60;
+          countdownStr = '${hours}h ${mins}m ${secs}s';
+        }
+
         final h = alarm.alarmTime.hour;
         final m = alarm.alarmTime.minute;
         final hour12 = h % 12 == 0 ? 12 : h % 12;
@@ -381,11 +458,11 @@ class HomeScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Next Alarm',
+                      'Next Alarm • $countdownStr',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: (isNight ? Colors.white : HelioColors.dayText).withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w700,
+                        color: (isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -429,6 +506,55 @@ class HomeScreen extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
+  }
+
+  DateTime _calculateNext(AlarmEntity alarm, DateTime now) {
+    if (alarm.repeatDays.isEmpty) {
+      if (alarm.alarmTime.isAfter(now)) {
+        return alarm.alarmTime;
+      }
+      DateTime scheduled = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        alarm.alarmTime.hour,
+        alarm.alarmTime.minute,
+      );
+      if (scheduled.isBefore(now)) {
+        scheduled = scheduled.add(const Duration(days: 1));
+      }
+      return scheduled;
+    }
+
+    int currentIsarWeekday = now.weekday - 1; // 0=Mon, 6=Sun
+    for (int i = 0; i < 8; i++) {
+      int checkIsarWeekday = (currentIsarWeekday + i) % 7;
+      if (alarm.repeatDays.contains(checkIsarWeekday)) {
+        DateTime potentialScheduled = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          alarm.alarmTime.hour,
+          alarm.alarmTime.minute,
+        ).add(Duration(days: i));
+
+        if (potentialScheduled.isAfter(now)) {
+          return potentialScheduled;
+        }
+      }
+    }
+
+    DateTime scheduled = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      alarm.alarmTime.hour,
+      alarm.alarmTime.minute,
+    );
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
   }
 
   String _getGreeting(int hour) {

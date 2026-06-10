@@ -22,7 +22,7 @@ final nextUpcomingAlarmProvider =
 );
 
 typedef NextUpcomingAlarmRef = AutoDisposeFutureProviderRef<AlarmEntity?>;
-String _$alarmNotifierHash() => r'4e4f1624efef8be4774ddf03949a343d690a04d3';
+String _$alarmNotifierHash() => r'0df5f34ebfdbdf65a5283cdab237c9d3ba184e4e';
 
 /// See also [AlarmNotifier].
 @ProviderFor(AlarmNotifier)

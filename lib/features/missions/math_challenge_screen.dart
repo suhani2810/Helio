@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system/colors.dart';
@@ -7,47 +8,136 @@ import '../../widgets/theme/sky_background.dart';
 import '../../widgets/premium_card.dart';
 import '../mood/mood_tracking_screen.dart';
 import '../../core/services/mission_service.dart';
+import '../../models/alarm_entity.dart';
+import '../../core/utils/math_generator.dart';
 
 class MathChallengeScreen extends ConsumerStatefulWidget {
   final bool isPreview;
   final DateTime? scheduledTime;
+  final AlarmEntity? alarm;
 
   const MathChallengeScreen({
     super.key,
     this.isPreview = false,
     this.scheduledTime,
+    this.alarm,
   });
 
   @override
   ConsumerState<MathChallengeScreen> createState() => _MathChallengeScreenState();
 }
 
-class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
-  final String _problem = '24 + 17';
-  final String _answer = '41';
+class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen>
+    with SingleTickerProviderStateMixin {
+  late int _difficulty;
+  late String _problem;
+  late String _answer;
   String _input = '';
+  int _solvedCount = 0;
+  late int _totalCount;
+
+  late final AnimationController _shakeController;
+  bool _isError = false;
+  bool _isSuccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _difficulty = widget.alarm?.mathDifficulty ?? 1;
+    _initMathSession();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  void _initMathSession() {
+    if (_difficulty == 0) {
+      _totalCount = 3;
+    } else if (_difficulty == 1) {
+      _totalCount = 5;
+    } else {
+      _totalCount = 7;
+    }
+    _solvedCount = 0;
+    _input = '';
+    _generateProblem();
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  void _generateProblem() {
+    final question = MathGenerator.generate(_difficulty);
+    _problem = question.expression;
+    _answer = question.answer;
+  }
 
   void _onKeyTap(String key) {
-    if (key == '✓') return;
-    setState(() {
-      if (key == 'C') {
-        _input = '';
-      } else if (_input.length < 3) {
-        _input += key;
-      }
-    });
+    if (_isSuccess || _isError) return;
 
-    if (_input == _answer) {
-      _finish();
+    if (key == 'C') {
+      setState(() {
+        _input = '';
+      });
+      return;
+    }
+
+    if (key == '✓') {
+      if (_input.isEmpty) return;
+      if (_input == _answer) {
+        setState(() {
+          _isSuccess = true;
+        });
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            setState(() {
+              _isSuccess = false;
+              _solvedCount++;
+              if (_solvedCount >= _totalCount) {
+                _finish();
+              } else {
+                _generateProblem();
+                _input = '';
+              }
+            });
+          }
+        });
+      } else {
+        setState(() {
+          _isError = true;
+        });
+        _shakeController.forward(from: 0.0);
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            setState(() {
+              _isError = false;
+              _input = '';
+            });
+          }
+        });
+      }
+      return;
+    }
+
+    if (_input.length < 6) {
+      setState(() {
+        _input += key;
+      });
     }
   }
 
   void _finish() async {
     if (!widget.isPreview) {
-      // Task 2: Real completion flow
       await ref.read(missionServiceProvider).completeMission(
         missionType: 'Math',
         scheduledTime: widget.scheduledTime ?? DateTime.now(),
+        alarm: widget.alarm,
+        mathDifficulty: _difficulty,
+        mathQuestionsSolved: _totalCount,
       );
     }
 
@@ -62,9 +152,9 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
         if (widget.isPreview) {
           Navigator.of(context).pop();
         } else {
-          // Task 2: Open Mood Screen after success
-          Navigator.of(context).pushReplacement(
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const MoodTrackingScreen()),
+            (route) => route.isFirst,
           );
         }
       }
@@ -78,6 +168,18 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
     final textColor = isNight ? Colors.white : HelioColors.dayText;
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
 
+    final diffLabels = ['Easy', 'Medium', 'Hard'];
+    final diffColors = [HelioColors.success, primaryColor, HelioColors.warning];
+    final diffColor = diffColors[_difficulty];
+    final diffLabel = diffLabels[_difficulty];
+
+    Color borderAndShadowColor = primaryColor;
+    if (_isError) {
+      borderAndShadowColor = HelioColors.error;
+    } else if (_isSuccess) {
+      borderAndShadowColor = HelioColors.success;
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SkyBackground(
@@ -85,7 +187,7 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 24),
               Text(
                 'Quick Math',
                 style: TextStyle(
@@ -94,45 +196,122 @@ class _MathChallengeScreenState extends ConsumerState<MathChallengeScreen> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 16),
+              if (widget.isPreview)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(3, (index) {
+                    final label = diffLabels[index];
+                    final color = diffColors[index];
+                    final isSelected = _difficulty == index;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ChoiceChip(
+                        label: Text(
+                          label,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : textColor.withValues(alpha: 0.6),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: color,
+                        backgroundColor: (isNight ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                        checkmarkColor: Colors.white,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _difficulty = index;
+                              _initMathSession();
+                            });
+                          }
+                        },
+                      ),
+                    );
+                  }),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: diffColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: diffColor.withOpacity(0.3), width: 1.5),
+                  ),
+                  child: Text(
+                    diffLabel.toUpperCase(),
+                    style: TextStyle(
+                      color: diffColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
               Text(
-                _problem,
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontSize: 96,
-                  fontWeight: FontWeight.w900,
-                  color: textColor,
-                  letterSpacing: -2,
+                'Question ${_solvedCount + 1} of $_totalCount',
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _problem,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontSize: _difficulty == 2 ? 64 : 80,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      letterSpacing: -1,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
-              Container(
-                height: 90,
-                width: 220,
-                decoration: BoxDecoration(
-                  color: (isNight ? Colors.white : primaryColor).withValues(alpha: 0.1),
-                  border: Border.all(color: primaryColor, width: 3),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryColor.withValues(alpha: 0.2),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    _input,
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: textColor,
+              AnimatedBuilder(
+                animation: _shakeController,
+                builder: (context, child) {
+                  final offset = sin(_shakeController.value * 4 * pi) * 15;
+                  return Transform.translate(
+                    offset: Offset(_isError ? offset : 0, 0),
+                    child: child,
+                  );
+                },
+                child: Container(
+                  height: 80,
+                  width: 220,
+                  decoration: BoxDecoration(
+                    color: borderAndShadowColor.withOpacity(0.1),
+                    border: Border.all(color: borderAndShadowColor, width: 3),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: borderAndShadowColor.withOpacity(0.2),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _input,
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: textColor,
+                      ),
                     ),
                   ),
                 ),
               ),
               const Spacer(),
               _buildKeypad(isNight, textColor, primaryColor),
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
             ],
           ),
         ),

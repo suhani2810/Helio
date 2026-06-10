@@ -11,6 +11,7 @@ import 'package:helio/features/missions/mission_selection_screen.dart';
 import 'package:helio/features/missions/mission_preview_screen.dart';
 import 'package:helio/features/audio/morning_audio_screen.dart';
 import 'package:helio/features/alarms/follow_up_chain_screen.dart';
+import 'package:helio/core/services/ringtone_service.dart';
 
 class CreateAlarmScreen extends ConsumerStatefulWidget {
   final AlarmEntity? initialAlarm;
@@ -32,9 +33,12 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
   
   // Task 7: Mission Settings
   late int _mathDifficulty;
+  late int _puzzleDifficulty;
   late int _stepGoal;
+  late int _walkingDifficulty;
   late int _shakeLimit;
   late String _targetObject;
+  late String _selectedRingtone;
 
   final List<String> _dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -55,7 +59,9 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
       _followUpMinutes = alarm.followUpMinutes;
       _followUpMission = alarm.followUpMission;
       _mathDifficulty = alarm.mathDifficulty;
+      _puzzleDifficulty = alarm.puzzleDifficulty;
       _stepGoal = alarm.stepGoal;
+      _walkingDifficulty = alarm.walkingDifficulty;
       _shakeLimit = alarm.shakeLimit;
       _targetObject = alarm.targetObject;
     } else {
@@ -68,10 +74,14 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
       _followUpMinutes = 5;
       _followUpMission = 'None';
       _mathDifficulty = 1;
-      _stepGoal = 30;
+      _puzzleDifficulty = 1;
+      _stepGoal = 100;
+      _walkingDifficulty = 1;
       _shakeLimit = 20;
       _targetObject = 'Mug';
     }
+    final initialRingtone = alarm?.ringtone ?? 'assets/audio/Classic.mp3';
+    _selectedRingtone = initialRingtone == 'Default' ? 'assets/audio/Classic.mp3' : initialRingtone;
   }
 
   void _saveAlarm() {
@@ -95,13 +105,16 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
       missionType: _selectedMission,
       enabled: _isEnabled,
       repeatDays: repeatDays,
-      ringtone: widget.initialAlarm?.ringtone ?? 'Default',
+      ringtone: _selectedRingtone,
       followUpEnabled: _followUpEnabled,
       followUpMinutes: _followUpMinutes,
       followUpMission: _followUpMission,
       createdAt: widget.initialAlarm?.createdAt ?? DateTime.now(),
       mathDifficulty: _mathDifficulty,
+      puzzleDifficulty: _puzzleDifficulty,
+      puzzleSize: _puzzleDifficulty == 0 ? 3 : (_puzzleDifficulty == 1 ? 4 : 5),
       stepGoal: _stepGoal,
+      walkingDifficulty: _walkingDifficulty,
       shakeLimit: _shakeLimit,
       targetObject: _targetObject,
     );
@@ -254,6 +267,14 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
                             if (_selectedMission != 'None')
                               _buildMissionConfig(isNight, textColor, primaryColor),
                             _buildSettingTile(
+                              Icons.notifications_active_rounded,
+                              'Ringtone',
+                              RingtoneService.getDisplayName(_selectedRingtone),
+                              textColor,
+                              primaryColor,
+                              onTap: () => _showRingtoneSelector(context, textColor, primaryColor, isNight),
+                            ),
+                            _buildSettingTile(
                               Icons.music_note_rounded,
                               'Sound',
                               'Morning Birds',
@@ -326,6 +347,215 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
     return hour < 5 || hour >= 19;
   }
 
+  void _showDifficultySelector(BuildContext context, bool isNight, Color textColor, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isNight ? HelioColors.nightCard : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Math Difficulty',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ...List.generate(3, (index) {
+                    final label = ['Easy', 'Medium', 'Hard'][index];
+                    final isSelected = _mathDifficulty == index;
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _mathDifficulty = index;
+                        });
+                        setModalState(() {});
+                        Navigator.pop(context);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                              color: isSelected ? primaryColor : textColor.withOpacity(0.5),
+                              size: 24,
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  void _showPuzzleDifficultySelector(BuildContext context, bool isNight, Color textColor, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isNight ? HelioColors.nightCard : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Puzzle Difficulty',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ...List.generate(3, (index) {
+                    final label = ['Easy', 'Medium', 'Hard'][index];
+                    final isSelected = _puzzleDifficulty == index;
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _puzzleDifficulty = index;
+                        });
+                        setModalState(() {});
+                        Navigator.pop(context);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                              color: isSelected ? primaryColor : textColor.withOpacity(0.5),
+                              size: 24,
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  void _showWalkingDifficultySelector(BuildContext context, bool isNight, Color textColor, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isNight ? HelioColors.nightCard : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Walking Difficulty',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ...List.generate(3, (index) {
+                    final target = [50, 100, 200][index];
+                    final label = ['Easy (50 steps)', 'Medium (100 steps)', 'Hard (200 steps)'][index];
+                    final isSelected = _walkingDifficulty == index;
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _walkingDifficulty = index;
+                          _stepGoal = target;
+                        });
+                        setModalState(() {});
+                        Navigator.pop(context);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                              color: isSelected ? primaryColor : textColor.withOpacity(0.5),
+                              size: 24,
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
   Widget _buildMissionConfig(bool isNight, Color textColor, Color primaryColor) {
     String configLabel = '';
     String configValue = '';
@@ -335,12 +565,17 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
       case 'Math':
         configLabel = 'Difficulty';
         configValue = ['Easy', 'Medium', 'Hard'][_mathDifficulty];
-        onTap = () => setState(() => _mathDifficulty = (_mathDifficulty + 1) % 3);
+        onTap = () => _showDifficultySelector(context, isNight, textColor, primaryColor);
+        break;
+      case 'Tile Puzzle':
+        configLabel = 'Difficulty';
+        configValue = ['Easy', 'Medium', 'Hard'][_puzzleDifficulty];
+        onTap = () => _showPuzzleDifficultySelector(context, isNight, textColor, primaryColor);
         break;
       case 'Walking':
-        configLabel = 'Steps';
-        configValue = '$_stepGoal';
-        onTap = () => setState(() => _stepGoal = (_stepGoal + 10 > 100) ? 10 : _stepGoal + 10);
+        configLabel = 'Difficulty';
+        configValue = ['Easy', 'Medium', 'Hard'][_walkingDifficulty];
+        onTap = () => _showWalkingDifficultySelector(context, isNight, textColor, primaryColor);
         break;
       case 'Shake':
         configLabel = 'Shakes';
@@ -466,5 +701,115 @@ class _CreateAlarmScreenState extends ConsumerState<CreateAlarmScreen> {
           ),
       ],
     );
+  }
+
+  void _showRingtoneSelector(BuildContext context, Color textColor, Color primaryColor, bool isNight) async {
+    final paths = await RingtoneService.getAvailableRingtonePaths();
+    
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isNight ? const Color(0xFF071330) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: textColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Select Ringtone',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: paths.length,
+                      itemBuilder: (context, index) {
+                        final path = paths[index];
+                        final displayName = RingtoneService.getDisplayName(path);
+                        final isSelected = _selectedRingtone == path;
+                        final isPlayingPreview = RingtoneService.currentlyPlayingPath == path;
+
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                          leading: Icon(
+                            isPlayingPreview ? Icons.volume_up_rounded : Icons.music_note_rounded,
+                            color: isSelected ? primaryColor : textColor.withValues(alpha: 0.5),
+                          ),
+                          title: Text(
+                            displayName,
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? Icon(Icons.check_circle_rounded, color: primaryColor)
+                              : null,
+                          onTap: () async {
+                            if (isPlayingPreview) {
+                              await RingtoneService.stop();
+                            } else {
+                              await RingtoneService.playPreview(path);
+                            }
+                            setModalState(() {});
+                            setState(() {
+                              _selectedRingtone = path;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await RingtoneService.stop();
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      child: const Text(
+                        'DONE',
+                        style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) async {
+      await RingtoneService.stop();
+    });
   }
 }

@@ -67,35 +67,45 @@ const AlarmEntitySchema = CollectionSchema(
       name: r'missionType',
       type: IsarType.string,
     ),
-    r'puzzleSize': PropertySchema(
+    r'puzzleDifficulty': PropertySchema(
       id: 10,
+      name: r'puzzleDifficulty',
+      type: IsarType.long,
+    ),
+    r'puzzleSize': PropertySchema(
+      id: 11,
       name: r'puzzleSize',
       type: IsarType.long,
     ),
     r'repeatDays': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'repeatDays',
       type: IsarType.longList,
     ),
     r'ringtone': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'ringtone',
       type: IsarType.string,
     ),
     r'shakeLimit': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'shakeLimit',
       type: IsarType.long,
     ),
     r'stepGoal': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'stepGoal',
       type: IsarType.long,
     ),
     r'targetObject': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'targetObject',
       type: IsarType.string,
+    ),
+    r'walkingDifficulty': PropertySchema(
+      id: 17,
+      name: r'walkingDifficulty',
+      type: IsarType.long,
     )
   },
   estimateSize: _alarmEntityEstimateSize,
@@ -143,12 +153,14 @@ void _alarmEntitySerialize(
   writer.writeLong(offsets[7], object.mathDifficulty);
   writer.writeLong(offsets[8], object.mathQuestionsCount);
   writer.writeString(offsets[9], object.missionType);
-  writer.writeLong(offsets[10], object.puzzleSize);
-  writer.writeLongList(offsets[11], object.repeatDays);
-  writer.writeString(offsets[12], object.ringtone);
-  writer.writeLong(offsets[13], object.shakeLimit);
-  writer.writeLong(offsets[14], object.stepGoal);
-  writer.writeString(offsets[15], object.targetObject);
+  writer.writeLong(offsets[10], object.puzzleDifficulty);
+  writer.writeLong(offsets[11], object.puzzleSize);
+  writer.writeLongList(offsets[12], object.repeatDays);
+  writer.writeString(offsets[13], object.ringtone);
+  writer.writeLong(offsets[14], object.shakeLimit);
+  writer.writeLong(offsets[15], object.stepGoal);
+  writer.writeString(offsets[16], object.targetObject);
+  writer.writeLong(offsets[17], object.walkingDifficulty);
 }
 
 AlarmEntity _alarmEntityDeserialize(
@@ -168,12 +180,14 @@ AlarmEntity _alarmEntityDeserialize(
     mathDifficulty: reader.readLongOrNull(offsets[7]) ?? 1,
     mathQuestionsCount: reader.readLongOrNull(offsets[8]) ?? 3,
     missionType: reader.readStringOrNull(offsets[9]) ?? 'None',
-    puzzleSize: reader.readLongOrNull(offsets[10]) ?? 3,
-    repeatDays: reader.readLongList(offsets[11]) ?? const [],
-    ringtone: reader.readStringOrNull(offsets[12]) ?? 'Default',
-    shakeLimit: reader.readLongOrNull(offsets[13]) ?? 20,
-    stepGoal: reader.readLongOrNull(offsets[14]) ?? 30,
-    targetObject: reader.readStringOrNull(offsets[15]) ?? 'Mug',
+    puzzleDifficulty: reader.readLongOrNull(offsets[10]) ?? 1,
+    puzzleSize: reader.readLongOrNull(offsets[11]) ?? 3,
+    repeatDays: reader.readLongList(offsets[12]) ?? const [],
+    ringtone: reader.readStringOrNull(offsets[13]) ?? 'Default',
+    shakeLimit: reader.readLongOrNull(offsets[14]) ?? 20,
+    stepGoal: reader.readLongOrNull(offsets[15]) ?? 30,
+    targetObject: reader.readStringOrNull(offsets[16]) ?? 'Mug',
+    walkingDifficulty: reader.readLongOrNull(offsets[17]) ?? 1,
   );
   object.id = id;
   return object;
@@ -207,17 +221,21 @@ P _alarmEntityDeserializeProp<P>(
     case 9:
       return (reader.readStringOrNull(offset) ?? 'None') as P;
     case 10:
-      return (reader.readLongOrNull(offset) ?? 3) as P;
+      return (reader.readLongOrNull(offset) ?? 1) as P;
     case 11:
-      return (reader.readLongList(offset) ?? const []) as P;
+      return (reader.readLongOrNull(offset) ?? 3) as P;
     case 12:
-      return (reader.readStringOrNull(offset) ?? 'Default') as P;
+      return (reader.readLongList(offset) ?? const []) as P;
     case 13:
-      return (reader.readLongOrNull(offset) ?? 20) as P;
+      return (reader.readStringOrNull(offset) ?? 'Default') as P;
     case 14:
-      return (reader.readLongOrNull(offset) ?? 30) as P;
+      return (reader.readLongOrNull(offset) ?? 20) as P;
     case 15:
+      return (reader.readLongOrNull(offset) ?? 30) as P;
+    case 16:
       return (reader.readStringOrNull(offset) ?? 'Mug') as P;
+    case 17:
+      return (reader.readLongOrNull(offset) ?? 1) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1074,6 +1092,62 @@ extension AlarmEntityQueryFilter
   }
 
   QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      puzzleDifficultyEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'puzzleDifficulty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      puzzleDifficultyGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'puzzleDifficulty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      puzzleDifficultyLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'puzzleDifficulty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      puzzleDifficultyBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'puzzleDifficulty',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
       puzzleSizeEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1655,6 +1729,62 @@ extension AlarmEntityQueryFilter
       ));
     });
   }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      walkingDifficultyEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'walkingDifficulty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      walkingDifficultyGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'walkingDifficulty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      walkingDifficultyLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'walkingDifficulty',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterFilterCondition>
+      walkingDifficultyBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'walkingDifficulty',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension AlarmEntityQueryObject
@@ -1791,6 +1921,20 @@ extension AlarmEntityQuerySortBy
     });
   }
 
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      sortByPuzzleDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'puzzleDifficulty', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      sortByPuzzleDifficultyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'puzzleDifficulty', Sort.desc);
+    });
+  }
+
   QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy> sortByPuzzleSize() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'puzzleSize', Sort.asc);
@@ -1849,6 +1993,20 @@ extension AlarmEntityQuerySortBy
       sortByTargetObjectDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'targetObject', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      sortByWalkingDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'walkingDifficulty', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      sortByWalkingDifficultyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'walkingDifficulty', Sort.desc);
     });
   }
 }
@@ -1993,6 +2151,20 @@ extension AlarmEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      thenByPuzzleDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'puzzleDifficulty', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      thenByPuzzleDifficultyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'puzzleDifficulty', Sort.desc);
+    });
+  }
+
   QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy> thenByPuzzleSize() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'puzzleSize', Sort.asc);
@@ -2051,6 +2223,20 @@ extension AlarmEntityQuerySortThenBy
       thenByTargetObjectDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'targetObject', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      thenByWalkingDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'walkingDifficulty', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QAfterSortBy>
+      thenByWalkingDifficultyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'walkingDifficulty', Sort.desc);
     });
   }
 }
@@ -2124,6 +2310,13 @@ extension AlarmEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AlarmEntity, AlarmEntity, QDistinct>
+      distinctByPuzzleDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'puzzleDifficulty');
+    });
+  }
+
   QueryBuilder<AlarmEntity, AlarmEntity, QDistinct> distinctByPuzzleSize() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'puzzleSize');
@@ -2159,6 +2352,13 @@ extension AlarmEntityQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'targetObject', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AlarmEntity, AlarmEntity, QDistinct>
+      distinctByWalkingDifficulty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'walkingDifficulty');
     });
   }
 }
@@ -2233,6 +2433,12 @@ extension AlarmEntityQueryProperty
     });
   }
 
+  QueryBuilder<AlarmEntity, int, QQueryOperations> puzzleDifficultyProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'puzzleDifficulty');
+    });
+  }
+
   QueryBuilder<AlarmEntity, int, QQueryOperations> puzzleSizeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'puzzleSize');
@@ -2266,6 +2472,12 @@ extension AlarmEntityQueryProperty
   QueryBuilder<AlarmEntity, String, QQueryOperations> targetObjectProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'targetObject');
+    });
+  }
+
+  QueryBuilder<AlarmEntity, int, QQueryOperations> walkingDifficultyProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'walkingDifficulty');
     });
   }
 }

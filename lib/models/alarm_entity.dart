@@ -22,8 +22,10 @@ class AlarmEntity {
   int mathQuestionsCount;
   int shakeLimit;
   int stepGoal;
+  int walkingDifficulty; // 0=Easy, 1=Medium, 2=Hard
   String targetObject;
   int puzzleSize; // 3 for 3x3, 4 for 4x4
+  int puzzleDifficulty; // 0=Easy, 1=Medium, 2=Hard
 
   AlarmEntity({
     this.label = 'Alarm',
@@ -40,7 +42,9 @@ class AlarmEntity {
     this.mathQuestionsCount = 3,
     this.shakeLimit = 20,
     this.stepGoal = 30,
+    this.walkingDifficulty = 1,
     this.targetObject = 'Mug',
     this.puzzleSize = 3,
+    this.puzzleDifficulty = 1,
   });
 }

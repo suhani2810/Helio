@@ -17,13 +17,10 @@ class InsightsDashboard extends ConsumerWidget {
     final isNight = _isNightMode(themeMode, DateTime.now().hour);
     final textColor = isNight ? Colors.white : HelioColors.dayText;
 
-    final streakAsync = ref.watch(streakNotifierProvider);
-    final bestStreakAsync = ref.watch(bestStreakProvider);
-    final totalWakeupsAsync = ref.watch(totalWakeupsProvider);
-    final alarmsAsync = ref.watch(alarmNotifierProvider);
+    final circadianScoreAsync = ref.watch(circadianScoreProvider);
     final missionStatsAsync = ref.watch(missionStatsProvider);
-    final consistencyAsync = ref.watch(wakeupConsistencyProvider);
-    final mostUsedAsync = ref.watch(mostUsedMissionProvider);
+    final historyAsync = ref.watch(wakeupHistoryProvider);
+    final hasHistory = historyAsync.value != null && historyAsync.value!.isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -43,7 +40,7 @@ class InsightsDashboard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _buildConsistencyScore(context, isNight, textColor, consistencyAsync),
+                _buildConsistencyScore(context, isNight, textColor, circadianScoreAsync, hasHistory),
                 const SizedBox(height: 32),
                 Text(
                   'Mission Distribution',
@@ -67,16 +64,7 @@ class InsightsDashboard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildQuickStats(
-                  context, 
-                  isNight, 
-                  textColor, 
-                  alarmsAsync, 
-                  totalWakeupsAsync,
-                  streakAsync,
-                  bestStreakAsync,
-                  mostUsedAsync,
-                ),
+                _buildQuickStats(context, isNight, textColor, ref),
                 const SizedBox(height: 100),
               ],
             ),
@@ -96,10 +84,14 @@ class InsightsDashboard extends ConsumerWidget {
     BuildContext context, 
     bool isNight, 
     Color textColor,
-    AsyncValue<double> consistency,
+    AsyncValue<double> scoreAsync,
+    bool hasHistory,
   ) {
     final primaryColor = isNight ? HelioColors.nightPrimary : HelioColors.dayPrimary;
-    final score = consistency.value ?? 0.0;
+    final score = scoreAsync.value ?? 0.0;
+    final description = hasHistory
+        ? 'Based on alarm consistency, wake-ups, and mood.'
+        : 'Complete your first mission to unlock analytics.';
     
     return PremiumCard(
       isGlass: isNight,
@@ -111,7 +103,7 @@ class InsightsDashboard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Wake-up Score',
+                  'Circadian Score',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: primaryColor,
                     fontWeight: FontWeight.w800,
@@ -119,7 +111,7 @@ class InsightsDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your consistency is based on mission delay.',
+                  description,
                   style: TextStyle(
                     color: textColor.withValues(alpha: 0.7),
                     fontSize: 14,
@@ -164,8 +156,9 @@ class InsightsDashboard extends ConsumerWidget {
         padding: const EdgeInsets.all(32),
         child: Center(
           child: Text(
-            'Complete missions to see stats',
+            'Complete your first mission to unlock analytics.',
             style: TextStyle(color: textColor.withValues(alpha: 0.5)),
+            textAlign: TextAlign.center,
           ),
         ),
       );
@@ -220,21 +213,34 @@ class InsightsDashboard extends ConsumerWidget {
     BuildContext context,
     bool isNight,
     Color textColor,
-    AsyncValue<List<dynamic>> alarms,
-    AsyncValue<int> totalWakeups,
-    AsyncValue<int> streak,
-    AsyncValue<int> bestStreak,
-    AsyncValue<String> mostUsed,
+    WidgetRef ref,
   ) {
-    final totalAlarms = alarms.value?.length ?? 0;
-    final wakeups = totalWakeups.value ?? 0;
+    final totalAlarms = ref.watch(totalAlarmsCreatedProvider).value ?? 0;
+    final wakeups = ref.watch(totalSuccessfulWakeupsProvider).value ?? 0;
+    final streak = ref.watch(streakNotifierProvider).value ?? 0;
+    final bestStreakVal = ref.watch(bestStreakProvider).value ?? 0;
+    final mostUsed = ref.watch(mostUsedMissionProvider).value ?? 'None';
+    final completionRate = ref.watch(missionCompletionRateProvider).value ?? 100.0;
+    final avgDuration = ref.watch(averageMissionDurationProvider).value ?? 0.0;
+    final avgWakeup = ref.watch(averageWakeupTimeProvider).value ?? '--:--';
+    final avgDelay = ref.watch(averageAlarmDelayProvider).value ?? 0.0;
+    final missedAlarms = ref.watch(missedAlarmsCountProvider).value ?? 0;
+    final commonMood = ref.watch(mostCommonMoodProvider).value ?? 'None';
+    final moodLogsVal = ref.watch(moodLogsCountProvider).value ?? 0;
 
     final trends = [
       {'title': 'Total Alarms', 'value': '$totalAlarms', 'icon': Icons.alarm_rounded, 'color': Colors.blue},
-      {'title': 'Total Wakeups', 'value': '$wakeups', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orange},
-      {'title': 'Current Streak', 'value': '${streak.value ?? 0} d', 'icon': Icons.local_fire_department_rounded, 'color': Colors.red},
-      {'title': 'Best Streak', 'value': '${bestStreak.value ?? 0} d', 'icon': Icons.emoji_events_rounded, 'color': Colors.amber},
-      {'title': 'Top Mission', 'value': mostUsed.value ?? 'None', 'icon': Icons.bolt_rounded, 'color': Colors.purple},
+      {'title': 'Total Successful Wakeups', 'value': '$wakeups', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orange},
+      {'title': 'Current Streak', 'value': '$streak d', 'icon': Icons.local_fire_department_rounded, 'color': Colors.red},
+      {'title': 'Best Streak', 'value': '$bestStreakVal d', 'icon': Icons.emoji_events_rounded, 'color': Colors.amber},
+      {'title': 'Top Mission', 'value': mostUsed, 'icon': Icons.bolt_rounded, 'color': Colors.purple},
+      {'title': 'Mission Completion Rate', 'value': '${completionRate.toStringAsFixed(1)}%', 'icon': Icons.percent_rounded, 'color': Colors.teal},
+      {'title': 'Average Mission Duration', 'value': '${avgDuration.toStringAsFixed(1)}s', 'icon': Icons.timer_rounded, 'color': Colors.indigo},
+      {'title': 'Average Wake-up Time', 'value': avgWakeup, 'icon': Icons.access_time_rounded, 'color': Colors.cyan},
+      {'title': 'Average Alarm Delay', 'value': '${avgDelay.toStringAsFixed(1)} min', 'icon': Icons.snooze_rounded, 'color': Colors.deepOrange},
+      {'title': 'Missed Alarms', 'value': '$missedAlarms', 'icon': Icons.alarm_off_rounded, 'color': Colors.brown},
+      {'title': 'Most Common Mood', 'value': commonMood, 'icon': Icons.mood_rounded, 'color': Colors.pink},
+      {'title': 'Total Mood Entries', 'value': '$moodLogsVal', 'icon': Icons.history_rounded, 'color': Colors.lightGreen},
     ];
 
     return Column(

@@ -184,6 +184,11 @@ class _MissionPreviewScreenState extends ConsumerState<MissionPreviewScreen> {
         missionScreen = const ShakeChallengeScreen(isPreview: true);
         break;
       case 'Walking':
+        ref.read(walkingStepsProvider.notifier).state = 0;
+        ref.read(walkingInitialStepsProvider.notifier).state = null;
+        ref.read(walkingPermissionDeniedProvider.notifier).state = false;
+        ref.read(walkingSensorUnavailableProvider.notifier).state = false;
+        ref.read(walkingStartTimeProvider.notifier).state = DateTime.now();
         missionScreen = const WalkingChallengeScreen(isPreview: true);
         break;
       case 'Tile Puzzle':

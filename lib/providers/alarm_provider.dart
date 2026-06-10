@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/alarm_entity.dart';
 import 'repository_providers.dart';
+import '../core/services/notification_service.dart';
 
 part 'alarm_provider.g.dart';
 
@@ -37,6 +38,7 @@ class AlarmNotifier extends _$AlarmNotifier {
       await repository.saveAlarm(alarm);
       if (alarm.enabled) {
         await scheduler.scheduleAlarm(alarm);
+        await NotificationService().showAlarmEnabledConfirmation(alarm.alarmTime);
       }
       return repository.getAllAlarms();
     });
@@ -51,6 +53,7 @@ class AlarmNotifier extends _$AlarmNotifier {
       await repository.saveAlarm(alarm);
       if (alarm.enabled) {
         await scheduler.scheduleAlarm(alarm);
+        await NotificationService().showAlarmEnabledConfirmation(alarm.alarmTime);
       } else {
         await scheduler.cancelAlarm(alarm.id);
       }
@@ -82,6 +85,7 @@ class AlarmNotifier extends _$AlarmNotifier {
         await repository.saveAlarm(alarm);
         if (alarm.enabled) {
           await scheduler.scheduleAlarm(alarm);
+          await NotificationService().showAlarmEnabledConfirmation(alarm.alarmTime);
         } else {
           await scheduler.cancelAlarm(alarm.id);
         }
@@ -100,8 +104,6 @@ Future<AlarmEntity?> nextUpcomingAlarm(NextUpcomingAlarmRef ref) async {
       if (active.isEmpty) return null;
       
       final now = DateTime.now();
-      // This is a simplified next alarm calculation. 
-      // In a real app, you'd calculate based on repeat days etc.
       active.sort((a, b) {
         final nextA = _calcNext(a, now);
         final nextB = _calcNext(b, now);
@@ -115,6 +117,43 @@ Future<AlarmEntity?> nextUpcomingAlarm(NextUpcomingAlarmRef ref) async {
 }
 
 DateTime _calcNext(AlarmEntity alarm, DateTime now) {
+  // For one-time alarms
+  if (alarm.repeatDays.isEmpty) {
+    if (alarm.alarmTime.isAfter(now)) {
+      return alarm.alarmTime;
+    }
+    DateTime scheduled = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      alarm.alarmTime.hour,
+      alarm.alarmTime.minute,
+    );
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+
+  // For repeat alarms
+  int currentIsarWeekday = now.weekday - 1; // 0=Mon, 6=Sun
+  for (int i = 0; i < 8; i++) {
+    int checkIsarWeekday = (currentIsarWeekday + i) % 7;
+    if (alarm.repeatDays.contains(checkIsarWeekday)) {
+      DateTime potentialScheduled = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        alarm.alarmTime.hour,
+        alarm.alarmTime.minute,
+      ).add(Duration(days: i));
+
+      if (potentialScheduled.isAfter(now)) {
+        return potentialScheduled;
+      }
+    }
+  }
+
   DateTime scheduled = DateTime(
     now.year,
     now.month,
@@ -125,6 +164,5 @@ DateTime _calcNext(AlarmEntity alarm, DateTime now) {
   if (scheduled.isBefore(now)) {
     scheduled = scheduled.add(const Duration(days: 1));
   }
-  // Repeat logic simplified for this provider
   return scheduled;
 }
